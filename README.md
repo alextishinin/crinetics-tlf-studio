@@ -1,0 +1,243 @@
+# TLF Studio
+
+Internal web application for Crinetics biostatisticians and clinical
+programmers to configure, generate, preview, and manage clinical TLF
+(Tables, Listings, Figures) outputs for clinical study reports.
+
+TLF Studio sits on top of the standalone
+[`crinetics-tlf-automation`](../crinetics-tlf-automation) Python library —
+all aggregation, formatting, and RTF generation lives there. Studio adds:
+
+- Per-study configuration via a guided wizard (ADaM upload, SAP import,
+  arms, analysis sets)
+- AI-assisted SAP extraction with editable, source-cited results
+- AI-assisted TFL selection (natural language → shell diff)
+- Real-data table preview rendered as HTML alongside an AI chat panel
+- Anomaly detection (deterministic rules + AI augmentation)
+- Async generation via Celery / Redis with live status
+- Output management with audit trail and approval workflow
+
+---
+
+## Architecture
+
+```
+                  ┌──────────────────────┐
+                  │  Next.js Frontend    │  (App Router, TypeScript,
+                  │  http://:3000        │   Tailwind, shadcn-style,
+                  └──────────┬───────────┘   React Query, Zustand)
+                             │ REST + streaming
+                             ▼
+                  ┌──────────────────────┐
+                  │  FastAPI Backend     │  (Python 3.11+, Pydantic)
+                  │  http://:8000        │
+                  └──┬───────────┬───────┘
+                     │           │
+       ┌─────────────▼─┐   ┌────▼──────────┐
+       │  Anthropic    │   │  Celery Worker│  (Redis broker)
+       │  Claude       │   └─────┬─────────┘
+       └───────────────┘         │
+                                 ▼
+                     ┌───────────────────────┐
+                     │ crinetics-tlf-        │  (the actual TLF
+                     │ automation library    │   library, imported)
+                     └──────────┬────────────┘
+                                │
+                                ▼
+                     ./studies/{uuid}/
+                       ├── study_meta.json
+                       ├── study_config.yaml
+                       ├── data/
+                       ├── outputs/
+                       └── audit/
+```
+
+Each study lives entirely on disk under `STUDIES_ROOT/<uuid>/`. There is
+no database — `study_meta.json` and `study_config.yaml` are the source of
+truth.
+
+---
+
+## Prerequisites
+
+- Docker + Docker Compose
+- An Anthropic API key (`ANTHROPIC_API_KEY`)
+- A working checkout of `crinetics-tlf-automation` as a sibling directory
+
+```
+parent-dir/
+  ├── crinetics-tlf-automation/   (the library)
+  └── crinetics-tlf-studio/       (this app)
+```
+
+For local development without Docker you also need Python 3.11+,
+[`uv`](https://docs.astral.sh/uv/), Node 20+, and Redis running on
+`localhost:6379`.
+
+---
+
+## Setup
+
+```bash
+git clone <repo>
+cd crinetics-tlf-studio
+
+cp .env.example .env
+# edit .env and set ANTHROPIC_API_KEY at minimum
+
+make dev   # starts redis + api + worker + frontend
+```
+
+Open http://localhost:3000.
+
+To run pieces locally without Docker:
+
+```bash
+# backend
+cd backend
+uv sync --extra dev
+uv run uvicorn main:app --reload          # http://localhost:8000
+
+# Celery worker (in a separate terminal)
+uv run celery -A worker.celery_app worker --loglevel=info
+
+# frontend
+cd ../frontend
+npm install
+npm run dev                                # http://localhost:3000
+```
+
+For the dev-without-Redis case, set `TLF_JOB_EXECUTOR=inline` in the API
+env to run generation synchronously inside the request thread. This is
+also the default for tests.
+
+---
+
+## First-use walkthrough
+
+1. **Create a study** — click "New Study" from the dashboard.
+2. **Step 1: Upload data.** Drop in your ADaM parquet (or .sas7bdat /
+   .xpt) files. The backend identifies each domain by filename and
+   extracts:
+   - STUDYID
+   - Treatment arms from ADSL.TRT01P / TRT01PN
+   - Analysis-set N counts per arm from SAFFL / ITTFL / EFFFL
+   - Visit schedule and PARAMCDs available per domain
+3. **Step 2: Configuration.** Edit auto-detected fields. Reorder
+   treatment arms (drag handle) to control output column order.
+4. **Step 3: SAP import.** Drop in the SAP PDF. AI extracts SAP
+   definitions and proposes which optional tables to include, each with
+   source-cited excerpts you can verify. You can skip this step.
+5. **Step 4: Review & create.** Confirms what we'll write to
+   `study_config.yaml`, then opens the study overview.
+6. **Select TFLs.** Required tables are always on; conditional tables
+   auto-select based on uploaded data (e.g. fatal AE table on iff
+   DTHFL='Y' exists). Use the natural-language input ("Add the DILI plot
+   and remove ECG tables") to apply bulk changes.
+7. **Preview a table.** Click any table's Preview button. The backend
+   runs the full polars aggregation against your ADaM data and returns
+   the table as JSON; the UI renders it styled to mimic the eventual
+   RTF. The AI panel on the right is pre-loaded with the table data and
+   shell spec — ask anything. Anomaly detection runs automatically and
+   surfaces issues.
+8. **Generate.** Batch-submit the selected shells. Each becomes a Celery
+   task; the UI polls every 2 seconds and shows live status. Failed jobs
+   capture the full traceback and offer a Retry button.
+9. **Outputs.** Browse generated RTFs and PNGs. Mark approved.
+   "Download Package" emits a ZIP with all outputs + a manifest CSV.
+
+---
+
+## Adding a new table type
+
+Add the implementation in the tlf library, not here:
+
+1. In `crinetics-tlf-automation/shells/registry.yaml`, append a new shell
+   under `shells:` with an `id`, `column_layout`, `row_schema`,
+   `footnotes`, `conditionality`, and `optional_flag` (if optional).
+2. In `crinetics-tlf-automation/src/tlf/tables/`, add a `generate(cfg,
+   registry, **kwargs) -> Path` function that builds a `TableSpec` and
+   calls `render_table`.
+3. In `crinetics-tlf-studio/backend/services/generation_service.py`,
+   add the shell id → function mapping in `_dispatchers()`.
+
+The new shell now appears in the Select TFLs screen automatically, with
+the correct conditionality and grouping.
+
+---
+
+## API surface
+
+All endpoints are JSON unless noted.
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET    | /api/studies | List studies |
+| POST   | /api/studies | Create a study |
+| GET    | /api/studies/{id} | Full study detail |
+| PUT    | /api/studies/{id} | Update study config |
+| DELETE | /api/studies/{id} | Delete a study |
+| POST   | /api/studies/{id}/upload | Multipart upload ADaM files |
+| GET    | /api/studies/{id}/shells | Shell registry resolved against this study |
+| PUT    | /api/studies/{id}/shells | Save shell selections |
+| POST   | /api/studies/{id}/preview/{table_id} | Run aggregation, return JSON |
+| POST   | /api/studies/{id}/jobs | Submit generation job(s) |
+| GET    | /api/studies/{id}/jobs | List jobs |
+| GET    | /api/studies/{id}/jobs/{job_id} | Job status |
+| DELETE | /api/studies/{id}/jobs/{job_id} | Cancel job |
+| GET    | /api/studies/{id}/outputs | List generated files |
+| GET    | /api/studies/{id}/outputs/{output_id}/download | RTF download |
+| POST   | /api/studies/{id}/outputs/{output_id}/status | Approve / reset |
+| POST   | /api/studies/{id}/outputs/package | ZIP all outputs + manifest |
+| POST   | /api/ai/sap | SAP PDF → structured config JSON |
+| POST   | /api/ai/shells | Natural language → shell selection diff |
+| POST   | /api/ai/chat | Streaming chat scoped to a table |
+| POST   | /api/ai/anomalies | Rule-based + AI anomaly scan |
+
+---
+
+## Audit trail
+
+For each generated output (`studies/{id}/outputs/<file>`) we write a
+companion `studies/{id}/audit/<file_stem>.json` with:
+
+- ADaM data extract date used
+- Shell registry version
+- Study config version
+- Submitter (Celery task triggered_by)
+- Approval status + approver + approval timestamp
+
+`POST /api/studies/{id}/outputs/{output_id}/status` mutates the audit
+record. The "Download Package" route includes a manifest.csv of every
+file plus its approval status.
+
+---
+
+## Tests
+
+```bash
+cd backend
+uv run pytest                # 30 tests, all green
+```
+
+Tests cover study CRUD, ADaM metadata extraction, shell registry +
+conditionality resolution, the full generation pipeline (real
+CDISCPILOT01 data when the sibling automation project is present), and
+AI services with a mocked Anthropic client.
+
+---
+
+## Known limitations
+
+- **Filesystem storage; no multi-user conflict resolution.** Two
+  programmers editing the same study at once is undefined behaviour. A
+  database layer is the natural next step.
+- **AI SAP extraction must be reviewed.** The wizard never auto-applies
+  AI output — every field stays editable and shows the source excerpt.
+- **No ECG tables tested with real data.** The CDISCPILOT01 sample has
+  no ADEG domain; the ECG generators produce a placeholder shell noting
+  the absence. Drop an ADEG parquet in the study's `data/` directory to
+  exercise them.
+- **AI cost.** SAP extraction and anomaly detection each make a single
+  Claude call per invocation. Cache or batch them if you're scanning
+  many tables per session.

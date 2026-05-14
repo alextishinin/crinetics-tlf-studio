@@ -1,0 +1,64 @@
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      STUDIES_ROOT: /data/studies
+      TLF_AUTOMATION_PATH: /opt/tlf-automation
+      TLF_REGISTRY_PATH: /opt/tlf-automation/shells/registry.yaml
+      TLF_DEFAULT_CONFIG_PATH: /opt/tlf-automation/config/study_config.yaml
+      REDIS_URL: redis://redis:6379/0
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-sonnet-4-20250514}
+    volumes:
+      - ./studies:/data/studies
+      - ../crinetics-tlf-automation:/opt/tlf-automation:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      STUDIES_ROOT: /data/studies
+      TLF_AUTOMATION_PATH: /opt/tlf-automation
+      TLF_REGISTRY_PATH: /opt/tlf-automation/shells/registry.yaml
+      TLF_DEFAULT_CONFIG_PATH: /opt/tlf-automation/config/study_config.yaml
+      REDIS_URL: redis://redis:6379/0
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-sonnet-4-20250514}
+    volumes:
+      - ./studies:/data/studies
+      - ../crinetics-tlf-automation:/opt/tlf-automation:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: celery -A worker.celery_app worker --loglevel=info
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+    depends_on:
+      - api
+    command: npm run dev

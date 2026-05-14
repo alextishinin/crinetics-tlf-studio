@@ -1,0 +1,43 @@
+# ---- Python ----
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+.venv/
+
+# ---- Node ----
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+
+# ---- Testing / coverage ----
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ---- IDE / OS / agent settings ----
+.vscode/
+.idea/
+.claude/
+*.swp
+.DS_Store
+Thumbs.db
+
+# ---- Runtime data — must NEVER be committed ----
+# Per-study directories hold uploaded ADaM datasets, generated outputs,
+# and audit records. Treat as production data, not source.
+studies/
+!studies/.gitkeep
+
+# ---- Secrets ----
+.env
+.env.local
+.env.*.local
+backend/.env
+frontend/.env*
+
+# ---- Local logs ----
+*.log

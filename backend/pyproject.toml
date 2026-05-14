@@ -1,0 +1,41 @@
+[project]
+name = "tlf-studio-backend"
+version = "0.1.0"
+description = "TLF Studio backend — FastAPI + Celery + Anthropic"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "pydantic>=2.9",
+    "pydantic-settings>=2.5",
+    "python-multipart>=0.0.9",
+    "celery>=5.4",
+    "redis>=5.1",
+    "anthropic>=0.39",
+    "pdfplumber>=0.11",
+    "pyyaml>=6.0",
+    "polars>=1.20",
+    "pyreadstat>=1.3",
+    "jinja2>=3.1",
+    "matplotlib>=3.8",
+    "rtflite>=2.5",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+    "httpx>=0.27",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["."]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+asyncio_mode = "auto"
