@@ -19,6 +19,96 @@ all aggregation, formatting, and RTF generation lives there. Studio adds:
 
 ---
 
+## Requirements
+
+Before setting up, make sure you have the following installed:
+
+| Software | Version | Download |
+|----------|---------|----------|
+| Python | 3.11+ | https://www.python.org/downloads/ |
+| uv | any | https://docs.astral.sh/uv/ — or run `pip install uv` |
+| Node.js | 20+ | https://nodejs.org/ |
+| Git | any | https://git-scm.com/ |
+
+You also need both repos cloned as siblings in the same parent folder:
+
+```
+C:\crinetics\
+  ├── crinetics-tlf-automation\   ← the TLF library
+  └── crinetics-tlf-studio\       ← this app
+```
+
+---
+
+## First-time setup
+
+Do this once after cloning. You will not need to repeat it.
+
+**Step 1 — Clone both repos**
+
+```cmd
+mkdir C:\crinetics
+cd C:\crinetics
+git clone <crinetics-tlf-automation repo URL>
+git clone <crinetics-tlf-studio repo URL>
+```
+
+**Step 2 — Install backend dependencies**
+
+```cmd
+cd C:\crinetics\crinetics-tlf-studio\backend
+uv sync
+```
+
+This creates a `.venv` folder inside `backend\` with all Python dependencies installed.
+
+**Step 3 — Install frontend dependencies**
+
+```cmd
+cd C:\crinetics\crinetics-tlf-studio\frontend
+npm install
+```
+
+**Step 4 — Configure your environment**
+
+The file `backend\.env` already exists with the correct paths pre-configured.
+The only thing you need to add is your Anthropic API key (required for AI features
+such as SAP extraction, table chat, and anomaly detection).
+
+Open `backend\.env` in any text editor and fill in:
+
+```
+ANTHROPIC_API_KEY=your-key-here
+```
+
+Get a key from https://console.anthropic.com/. If you skip this step the app
+still runs — AI features will just return an error when used.
+
+---
+
+## Launching the app
+
+Once first-time setup is complete, launching takes one step:
+
+**Double-click `launch.bat`** in the `crinetics-tlf-studio\` folder.
+
+Two minimised terminal windows will appear in the taskbar (the API server and
+the frontend). After about 8 seconds your browser will open automatically to:
+
+**http://localhost:3000**
+
+### To shut down
+
+Close the two minimised terminal windows in the taskbar labelled
+**TLF API** and **TLF Frontend**.
+
+### Optional — desktop shortcut
+
+Right-click `launch.bat` → **Send to → Desktop (create shortcut)** for
+one-click launch from your desktop.
+
+---
+
 ## Architecture
 
 ```
@@ -56,60 +146,10 @@ Each study lives entirely on disk under `STUDIES_ROOT/<uuid>/`. There is
 no database — `study_meta.json` and `study_config.yaml` are the source of
 truth.
 
----
-
-## Prerequisites
-
-- Docker + Docker Compose
-- An Anthropic API key (`ANTHROPIC_API_KEY`)
-- A working checkout of `crinetics-tlf-automation` as a sibling directory
-
-```
-parent-dir/
-  ├── crinetics-tlf-automation/   (the library)
-  └── crinetics-tlf-studio/       (this app)
-```
-
-For local development without Docker you also need Python 3.11+,
-[`uv`](https://docs.astral.sh/uv/), Node 20+, and Redis running on
-`localhost:6379`.
-
----
-
-## Setup
-
-```bash
-git clone <repo>
-cd crinetics-tlf-studio
-
-cp .env.example .env
-# edit .env and set ANTHROPIC_API_KEY at minimum
-
-make dev   # starts redis + api + worker + frontend
-```
-
-Open http://localhost:3000.
-
-To run pieces locally without Docker:
-
-```bash
-# backend
-cd backend
-uv sync --extra dev
-uv run uvicorn main:app --reload          # http://localhost:8000
-
-# Celery worker (in a separate terminal)
-uv run celery -A worker.celery_app worker --loglevel=info
-
-# frontend
-cd ../frontend
-npm install
-npm run dev                                # http://localhost:3000
-```
-
-For the dev-without-Redis case, set `TLF_JOB_EXECUTOR=inline` in the API
-env to run generation synchronously inside the request thread. This is
-also the default for tests.
+> **Note:** TLF generation runs synchronously (`TLF_JOB_EXECUTOR=inline`)
+> by default, so Redis and Celery are not required. To switch to async
+> parallel generation, install Redis and set `TLF_JOB_EXECUTOR=celery`
+> in `backend\.env`.
 
 ---
 
@@ -131,7 +171,7 @@ also the default for tests.
 5. **Step 4: Review & create.** Confirms what we'll write to
    `study_config.yaml`, then opens the study overview.
 6. **Select TFLs.** Required tables are always on; conditional tables
-   auto-select based on uploaded data (e.g. fatal AE table on iff
+   auto-select based on uploaded data (e.g. fatal AE table only if
    DTHFL='Y' exists). Use the natural-language input ("Add the DILI plot
    and remove ECG tables") to apply bulk changes.
 7. **Preview a table.** Click any table's Preview button. The backend
@@ -140,9 +180,8 @@ also the default for tests.
    RTF. The AI panel on the right is pre-loaded with the table data and
    shell spec — ask anything. Anomaly detection runs automatically and
    surfaces issues.
-8. **Generate.** Batch-submit the selected shells. Each becomes a Celery
-   task; the UI polls every 2 seconds and shows live status. Failed jobs
-   capture the full traceback and offer a Retry button.
+8. **Generate.** Batch-submit the selected shells. The UI shows live
+   status. Failed jobs capture the full traceback and offer a Retry button.
 9. **Outputs.** Browse generated RTFs and PNGs. Mark approved.
    "Download Package" emits a ZIP with all outputs + a manifest CSV.
 
