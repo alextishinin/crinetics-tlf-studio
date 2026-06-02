@@ -29,8 +29,9 @@ Thumbs.db
 # ---- Runtime data — must NEVER be committed ----
 # Per-study directories hold uploaded ADaM datasets, generated outputs,
 # and audit records. Treat as production data, not source.
-studies/
-!studies/.gitkeep
+/studies/
+!/studies/.gitkeep
+/backend/studies/
 
 # ---- Secrets ----
 .env
