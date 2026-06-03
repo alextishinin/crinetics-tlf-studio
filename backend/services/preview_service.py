@@ -10,10 +10,12 @@ from __future__ import annotations
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
+import re
 from typing import Any, Iterator
 
 from config import get_settings
 from services import generation_service, study_service
+from services.tlf_runtime import configure_for_study
 
 
 def generate_preview(study_id: str, table_id: str) -> dict[str, Any]:
@@ -38,11 +40,10 @@ def generate_preview(study_id: str, table_id: str) -> dict[str, Any]:
     cfg = load_study_config(sdir / "study_config.yaml")
     settings = get_settings()
     registry = load_shell_registry(settings.tlf_registry_path)
-    cfg.adam_path = (sdir / "data").resolve()
-    cfg.output_path = (sdir / "outputs").resolve()
-    cfg.output_path.mkdir(parents=True, exist_ok=True)
+    configure_for_study(cfg, sdir)
 
     dispatch = generation_service._dispatchers()
+    table_id = _coerce_table_id(table_id, dispatch)
     if table_id not in dispatch:
         raise ValueError(f"Unknown table id: {table_id}")
 
@@ -82,6 +83,27 @@ def generate_preview(study_id: str, table_id: str) -> dict[str, Any]:
     if spec is None:
         raise RuntimeError("No TableSpec was rendered for this shell")
     return _spec_to_json(spec, cfg)
+
+
+def _coerce_table_id(table_id: str, dispatch: dict[str, Any]) -> str:
+    """Accept old output-derived preview IDs and map them to shell IDs.
+
+    A previous Outputs-page parser produced IDs like
+    ``t_NEW_STUDY_Table_14_1_1_1_03JUN2026``. The preview endpoint expects
+    registry shell IDs like ``t_14_1_1_1``.
+    """
+    if table_id in dispatch:
+        return table_id
+
+    raw = table_id[2:] if table_id.startswith(("t_", "f_")) else table_id
+    match = re.search(r"_(Table|Figure)_([0-9][0-9_.]*[0-9])_\d{2}[A-Z]{3}\d{4}$", raw)
+    if not match:
+        return table_id
+
+    prefix = "f" if match.group(1) == "Figure" else "t"
+    number = match.group(2).replace(".", "_")
+    candidate = f"{prefix}_{number}"
+    return candidate if candidate in dispatch else table_id
 
 
 def _spec_to_json(spec: Any, cfg: Any) -> dict[str, Any]:

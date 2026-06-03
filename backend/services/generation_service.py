@@ -20,6 +20,7 @@ from typing import Any, Callable
 from config import get_settings
 from models.job import JobRecord, JobStatus
 from services import study_service
+from services.tlf_runtime import configure_for_study
 
 
 JOBS_FILE = "jobs.json"
@@ -205,11 +206,9 @@ def _do_generate(study_id: str, table_id: str) -> Path:
     settings = get_settings()
     registry = load_shell_registry(settings.tlf_registry_path)
 
-    # Point the cfg at this study's data / outputs even if the YAML didn't
-    # already (we make outputs absolute under the study directory).
-    cfg.adam_path = (sdir / "data").resolve()
-    cfg.output_path = (sdir / "outputs").resolve()
-    cfg.output_path.mkdir(parents=True, exist_ok=True)
+    # Point the cfg at this study's data / outputs and recompute shell_mode
+    # after those paths are known.
+    configure_for_study(cfg, sdir)
 
     dispatch = _dispatchers()
     if table_id not in dispatch:

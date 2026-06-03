@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import io
 import json
+import re
 import zipfile
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -50,14 +51,27 @@ def _write_status_map(study_id: str, statuses: dict[str, str]) -> None:
     (aud / "_status.json").write_text(json.dumps(statuses, indent=2))
 
 
-def _table_number_from_name(name: str) -> str:
-    """Recover '14.1.1.1' or '14.3.5.2' from 'CDISCPILOT01_Table_14.1.1.1_12MAY2026.rtf'."""
+def _kind_and_number_from_name(name: str) -> tuple[str, str]:
+    """Recover ('Table', '14.1.1.1') from a generated output filename.
+
+    Study IDs may contain underscores, so split-based parsing is fragile for
+    names like ``NEW_STUDY_Table_14.1.1.1_03JUN2026.rtf``.
+    """
     stem = Path(name).stem
-    parts = stem.split("_")
-    # Skip leading study tokens and trailing date token
-    if len(parts) >= 4 and parts[1] in {"Table", "Figure"}:
-        return "_".join(parts[2:-1])
-    return stem
+    match = re.search(r"_(Table|Figure)_([^_]+)_\d{2}[A-Z]{3}\d{4}$", stem)
+    if not match:
+        return "Table", stem
+    return match.group(1), match.group(2)
+
+
+def _table_number_from_name(name: str) -> str:
+    return _kind_and_number_from_name(name)[1]
+
+
+def _table_id_from_name(name: str) -> str:
+    kind, number = _kind_and_number_from_name(name)
+    prefix = "f" if kind == "Figure" else "t"
+    return f"{prefix}_{number.replace('.', '_')}"
 
 
 def list_outputs(study_id: str) -> list[OutputRecord]:
@@ -71,6 +85,7 @@ def list_outputs(study_id: str) -> list[OutputRecord]:
             continue
         stat = p.stat()
         number = _table_number_from_name(p.name)
+        table_id = _table_id_from_name(p.name)
         # Try to look up the population from study config + registry
         population = ""
         out.append(
@@ -78,7 +93,7 @@ def list_outputs(study_id: str) -> list[OutputRecord]:
                 output_id=p.stem,
                 filename=p.name,
                 table_number=number,
-                table_id=f"t_{number.replace('.', '_')}",
+                table_id=table_id,
                 population=population,
                 generated_at=datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc),
                 size_bytes=stat.st_size,

@@ -1,7 +1,7 @@
 "use client";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { Sparkles, Save } from "lucide-react";
+import { AlertCircle, Sparkles, Save } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,7 +21,7 @@ const SUGGESTIONS = [
 
 export default function ShellsPage() {
   const params = useParams<{ studyId: string }>();
-  const { data, isLoading } = useShells(params.studyId);
+  const { data, error, isError, isLoading, refetch } = useShells(params.studyId);
   const save = useSaveShellSelection(params.studyId);
   const nlMutation = useNlShells(params.studyId);
 
@@ -74,7 +74,30 @@ export default function ShellsPage() {
     setPendingChanges(result.changes);
   };
 
-  if (isLoading || !data) return <div className="p-6 text-sm">Loading shells…</div>;
+  if (isLoading) return <div className="p-6 text-sm">Loading shells...</div>;
+
+  if (isError || !data) {
+    return (
+      <div className="p-6">
+        <Card className="border-rose-200 bg-rose-50">
+          <CardContent className="flex items-start gap-3 pt-4 text-sm text-rose-900">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+            <div className="space-y-3">
+              <div>
+                <div className="font-medium">Could not load shells</div>
+                <div className="text-rose-800">
+                  {error instanceof Error ? error.message : "The shells API did not return data."}
+                </div>
+              </div>
+              <Button size="sm" variant="outline" onClick={() => refetch()}>
+                Retry
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-full flex-col">
