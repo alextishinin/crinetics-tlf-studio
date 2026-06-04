@@ -47,7 +47,20 @@ _GROUP_LABELS = [
 def load_registry() -> dict[str, Any]:
     path = get_settings().tlf_registry_path.resolve()
     with open(path) as f:
-        return yaml.safe_load(f) or {}
+        registry = yaml.safe_load(f) or {}
+    if registry.get("shell_files"):
+        shells: list[dict[str, Any]] = []
+        for rel in registry["shell_files"]:
+            shell_path = path.parent / rel
+            with open(shell_path) as f:
+                shell = yaml.safe_load(f) or {}
+            if "id" not in shell:
+                raise ValueError(f"Shell file {shell_path} is missing required key 'id'")
+            shells.append(shell)
+        registry["shells"] = shells
+    else:
+        registry["shells"] = registry.get("shells", [])
+    return registry
 
 
 def clear_cache() -> None:

@@ -191,9 +191,11 @@ truth.
 
 Add the implementation in the tlf library, not here:
 
-1. In `crinetics-tlf-automation/shells/registry.yaml`, append a new shell
-   under `shells:` with an `id`, `column_layout`, `row_schema`,
-   `footnotes`, `conditionality`, and `optional_flag` (if optional).
+1. In `crinetics-tlf-automation/shells/tables/` or `shells/figures/`,
+   add a YAML file for the new output with an `id`, `column_layout`,
+   `row_schema`, `footnotes`, `conditionality`, and `optional_flag`
+   (if optional). Add the relative path to `shell_files:` in
+   `crinetics-tlf-automation/shells/registry.yaml`.
 2. In `crinetics-tlf-automation/src/tlf/tables/`, add a `generate(cfg,
    registry, **kwargs) -> Path` function that builds a `TableSpec` and
    calls `render_table`.

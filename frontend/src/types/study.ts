@@ -59,6 +59,7 @@ export interface StudyConfig {
   study_id: string;
   protocol_number: string;
   protocol_title: string;
+  drug?: string;
   indication?: string;
   data_extract_date?: string;
   data_cut_date?: string;
