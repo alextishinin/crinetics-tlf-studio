@@ -19,7 +19,7 @@ export function TablePreview({ data }: { data: PreviewData }) {
           <thead>
             <tr className="border-b-2 border-slate-400">
               {data.column_headers.map((h, i) => (
-                <th key={i} className="p-1 text-center align-bottom">{h}</th>
+                <th key={i} className="whitespace-pre-line p-1 text-center align-bottom">{h}</th>
               ))}
             </tr>
             {data.arm_n_labels.some((n) => n) && (

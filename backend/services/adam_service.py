@@ -152,14 +152,21 @@ def _pick(directory: Path, names: list[str]) -> Path | None:
 def _extract_arms(adsl: pl.DataFrame) -> list[TreatmentArm]:
     if "TRT01P" not in adsl.columns or "TRT01PN" not in adsl.columns:
         return []
-    pairs = (
+    rows = (
         adsl.select(["TRT01P", "TRT01PN"])
         .drop_nulls()
         .unique()
-        .sort("TRT01PN")
+        .to_dicts()
     )
     out: list[TreatmentArm] = []
-    for row in pairs.iter_rows(named=True):
+
+    def _sort_key(row: dict) -> tuple[int, int]:
+        label = str(row["TRT01P"]).lower()
+        trtpn = int(row["TRT01PN"])
+        is_control = trtpn == 0 or "placebo" in label or "control" in label
+        return (1 if is_control else 0, trtpn)
+
+    for row in sorted(rows, key=_sort_key):
         label = str(row["TRT01P"])
         trtpn = int(row["TRT01PN"])
         out.append(

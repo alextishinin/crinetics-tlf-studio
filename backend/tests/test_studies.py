@@ -109,8 +109,8 @@ def test_upload_extracts_metadata(client, synthetic_data_dir: Path):
     assert body["study_id_value"] == "MOCK01"
     domain_codes = {d["domain"] for d in body["domains"]}
     assert "adsl" in domain_codes
-    # Three arms detected (54, 81, 0) sorted by TRTPN
-    assert [a["trtpn"] for a in body["detected_arms"]] == [0, 54, 81]
+    # Three arms detected in table-display order: active arms, then placebo.
+    assert [a["trtpn"] for a in body["detected_arms"]] == [54, 81, 0]
     # Analysis sets include SAF / ITT / EFF / ALL
     assert {"SAF", "ITT", "EFF", "ALL"}.issubset(body["detected_analysis_sets"].keys())
 

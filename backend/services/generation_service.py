@@ -50,6 +50,7 @@ def _dispatchers() -> dict[str, Callable[..., Any]]:
     return {
         # Disposition / demographics / exposure
         "t_14_1_1_1":           lambda cfg, reg, **k: disposition.generate(cfg, reg, **k),
+        "t_14_1_1_2":           lambda cfg, reg, **k: disposition.generate_randomization_by_country(cfg, reg, **k),
         "t_14_1_2_1":           lambda cfg, reg, **k: baseline.generate(cfg, reg, **k),
         "t_14_1_3_1":           lambda cfg, reg, **k: exposure.generate(cfg, reg, **k),
         "t_14_1_3_2":           lambda cfg, reg, **k: exposure.generate_compliance(cfg, reg, **k),

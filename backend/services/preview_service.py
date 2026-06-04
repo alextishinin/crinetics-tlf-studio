@@ -109,12 +109,18 @@ def _coerce_table_id(table_id: str, dispatch: dict[str, Any]) -> str:
 def _spec_to_json(spec: Any, cfg: Any) -> dict[str, Any]:
     return {
         "shell_id": spec.shell_id,
-        "title": list(spec.title),
-        "header_text": f"Crinetics Pharmaceuticals    {cfg.protocol_number}",
-        "column_headers": list(spec.column_headers),
-        "arm_n_labels": list(spec.arm_n_labels),
-        "body_rows": [list(row) for row in spec.body_rows],
-        "footnotes": [{"kind": f.kind, "text": f.text} for f in spec.footnotes],
+        "title": [_preview_text(t) for t in spec.title],
+        "header_text": _preview_text(f"Crinetics Pharmaceuticals    {cfg.protocol_number}"),
+        "column_headers": [_preview_text(h) for h in spec.column_headers],
+        "arm_n_labels": [_preview_text(n) for n in spec.arm_n_labels],
+        "body_rows": [[_preview_text(cell) for cell in row] for row in spec.body_rows],
+        "footnotes": [{"kind": f.kind, "text": _preview_text(f.text)} for f in spec.footnotes],
         "source": cfg.source_code_location,
         "page_indicator": "Page 1 of 1",
     }
+
+
+def _preview_text(value: Any) -> str:
+    """Translate RTF-only line controls into browser-preview text."""
+    text = str(value)
+    return re.sub(r"\\line\s*", "\n", text)
