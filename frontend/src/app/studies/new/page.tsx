@@ -1,6 +1,6 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { ArrowLeft, ArrowRight, CheckCircle2, FileText, Upload } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -23,11 +23,14 @@ import type { AnalysisSet, TreatmentArm, UploadResult } from "@/types/study";
 import type { SapExtractionResponse } from "@/types/ai";
 
 const STEPS = [
-  { id: 1, label: "Upload Data" },
+  { id: 1, label: "Select Data" },
   { id: 2, label: "Configuration" },
   { id: 3, label: "SAP Import" },
   { id: 4, label: "Review" },
 ];
+
+// ADaM dataset extensions we pull out of the selected folder.
+const DATA_EXTENSIONS = [".parquet", ".sas7bdat", ".xpt"];
 
 export default function NewStudyPage() {
   const router = useRouter();
@@ -36,6 +39,7 @@ export default function NewStudyPage() {
 
   // Step 1 state
   const [files, setFiles] = useState<File[]>([]);
+  const [folderName, setFolderName] = useState<string>("");
   const [uploadResult, setUploadResult] = useState<UploadResult | null>(null);
 
   // Step 2 state
@@ -63,6 +67,30 @@ export default function NewStudyPage() {
   const queryClient = useQueryClient();
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+
+  // Sets the non-standard folder-picker attributes on the file input so the
+  // browser shows a "select folder" dialog instead of a file dialog.
+  const folderInputRef = useCallback((node: HTMLInputElement | null) => {
+    if (node) {
+      node.setAttribute("webkitdirectory", "");
+      node.setAttribute("directory", "");
+    }
+  }, []);
+
+  const handleFolderSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const all = Array.from(e.target.files ?? []);
+    // Keep only recognised ADaM datasets; ignore anything else in the folder.
+    const dataFiles = all.filter((f) =>
+      DATA_EXTENSIONS.some((ext) => f.name.toLowerCase().endsWith(ext)),
+    );
+    setFiles(dataFiles);
+    // The first path segment of webkitRelativePath is the chosen folder name.
+    const first = all[0] as (File & { webkitRelativePath?: string }) | undefined;
+    const rel = first?.webkitRelativePath ?? "";
+    setFolderName(rel ? rel.split("/")[0] : "");
+    setUploadError(null);
+    setUploadResult(null);
+  };
 
   const ensureStudy = async () => {
     if (studyId) return studyId;
@@ -166,18 +194,32 @@ export default function NewStudyPage() {
         {step === 1 && (
           <Card className="mx-auto max-w-3xl">
             <CardHeader>
-              <CardTitle>Step 1 — Upload Data</CardTitle>
-              <CardDescription>Upload your ADaM datasets. We auto-identify each domain.</CardDescription>
+              <CardTitle>Step 1 — Select Data Folder</CardTitle>
+              <CardDescription>
+                Choose the folder that holds your ADaM datasets. We&apos;ll find every
+                .parquet, .sas7bdat, and .xpt file inside it and auto-identify each domain.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <Input
+                ref={folderInputRef}
                 type="file"
                 multiple
-                accept=".parquet,.sas7bdat,.xpt"
-                onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
+                onChange={handleFolderSelect}
               />
               <div className="text-sm text-slate-600">
-                {files.length === 0 ? "No files selected" : `${files.length} file(s) selected`}
+                {!folderName ? (
+                  "No folder selected"
+                ) : files.length === 0 ? (
+                  <span className="text-amber-700">
+                    No .parquet, .sas7bdat, or .xpt files found in &ldquo;{folderName}&rdquo;.
+                  </span>
+                ) : (
+                  <>
+                    <span className="font-medium">{folderName}</span> — {files.length} data file
+                    {files.length === 1 ? "" : "s"} found
+                  </>
+                )}
               </div>
               {uploadResult && (
                 <div className="space-y-2">
