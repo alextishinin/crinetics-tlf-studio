@@ -74,6 +74,7 @@ export interface StudyConfig {
   optional_outputs?: Record<string, boolean>;
   exposure_duration_bins?: unknown[];
   common_ae_cutoff_pct?: number;
+  document_extracts?: Record<string, unknown>;
 }
 
 export interface StudyDetail {

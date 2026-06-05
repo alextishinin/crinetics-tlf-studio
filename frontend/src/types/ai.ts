@@ -22,6 +22,32 @@ export interface SapExtractionResponse {
   error: string | null;
 }
 
+export interface ExtractedField {
+  value: string;
+  source_excerpt: string;
+  confidence: "high" | "medium" | "low";
+}
+
+export interface ProtocolExtractionResponse {
+  fields: Record<string, ExtractedField>;
+  raw_excerpt_sample: string;
+  error: string | null;
+}
+
+export interface CrfCategoryList {
+  variable: string;
+  label: string;
+  values: string[];
+  source_excerpt: string;
+  confidence: "high" | "medium" | "low";
+}
+
+export interface CrfExtractionResponse {
+  category_lists: CrfCategoryList[];
+  raw_excerpt_sample: string;
+  error: string | null;
+}
+
 export interface NlShellChange {
   shell_id: string;
   action: "add" | "remove";

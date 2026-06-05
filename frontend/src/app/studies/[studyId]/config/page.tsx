@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Header } from "@/components/layout/Header";
 import { TreatmentArmEditor } from "@/components/studies/TreatmentArmEditor";
 import { AnalysisSetEditor } from "@/components/studies/AnalysisSetEditor";
+import { DocumentExtracts, type DocumentExtractsValue } from "@/components/documents/DocumentExtracts";
 import { useStudy, useUpdateStudy } from "@/hooks/useStudy";
 import type { AnalysisSet, SapDefinitions, TreatmentArm } from "@/types/study";
 
@@ -56,6 +57,7 @@ export default function ConfigPage() {
   const [sapDefinitions, setSapDefinitions] = useState<SapDefinitions>(EMPTY_SAP_DEFINITIONS);
   const [secondaryEndpoints, setSecondaryEndpoints] = useState("");
   const [subgroupAnalyses, setSubgroupAnalyses] = useState("");
+  const [documentExtracts, setDocumentExtracts] = useState<DocumentExtractsValue>({});
 
   useEffect(() => {
     if (!data) return;
@@ -76,6 +78,7 @@ export default function ConfigPage() {
     setSapDefinitions(sap);
     setSecondaryEndpoints((sap.secondary_endpoints ?? []).join("\n"));
     setSubgroupAnalyses((sap.subgroup_analyses ?? []).join("\n"));
+    setDocumentExtracts((data.config.document_extracts as DocumentExtractsValue) ?? {});
   }, [data]);
 
   const patchSapDefinition = (key: keyof SapDefinitions, value: string) => {
@@ -103,6 +106,7 @@ export default function ConfigPage() {
         secondary_endpoints: splitLines(secondaryEndpoints),
         subgroup_analyses: splitLines(subgroupAnalyses),
       },
+      document_extracts: documentExtracts as Record<string, unknown>,
     });
 
   if (!data) return <div className="p-6">Loading…</div>;
@@ -168,6 +172,22 @@ export default function ConfigPage() {
                 />
               </div>
             </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Source Documents (Protocol & CRF)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <DocumentExtracts
+              value={documentExtracts}
+              onChange={setDocumentExtracts}
+              onApplyProtocol={(fields) => {
+                if (fields.protocol_number) setProtocol(fields.protocol_number);
+                if (fields.protocol_title) setTitle(fields.protocol_title);
+                if (fields.indication) setIndication(fields.indication);
+              }}
+            />
           </CardContent>
         </Card>
         <Card>

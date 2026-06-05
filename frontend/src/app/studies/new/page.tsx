@@ -11,6 +11,7 @@ import { Header } from "@/components/layout/Header";
 import { TreatmentArmEditor } from "@/components/studies/TreatmentArmEditor";
 import { AnalysisSetEditor } from "@/components/studies/AnalysisSetEditor";
 import { SapReviewPanel } from "@/components/ai/SapReviewPanel";
+import { DocumentExtracts, type DocumentExtractsValue } from "@/components/documents/DocumentExtracts";
 import {
   useCreateStudy,
   useUpdateStudy,
@@ -25,7 +26,7 @@ import type { SapExtractionResponse } from "@/types/ai";
 const STEPS = [
   { id: 1, label: "Select Data" },
   { id: 2, label: "Configuration" },
-  { id: 3, label: "SAP Import" },
+  { id: 3, label: "Documents" },
   { id: 4, label: "Review" },
 ];
 
@@ -60,6 +61,7 @@ export default function NewStudyPage() {
   // Step 3 state
   const [sapFile, setSapFile] = useState<File | null>(null);
   const [sapExtraction, setSapExtraction] = useState<SapExtractionResponse | null>(null);
+  const [documentExtracts, setDocumentExtracts] = useState<DocumentExtractsValue>({});
 
   const createStudy = useCreateStudy();
   const updateStudy = useUpdateStudy(studyId ?? "");
@@ -158,6 +160,7 @@ export default function NewStudyPage() {
       include_total_column: includeTotal,
       sap_definitions: sapDefinitions as any,
       optional_outputs: optionalOutputs,
+      document_extracts: documentExtracts as Record<string, unknown>,
     });
     router.push(`/studies/${sid}`);
   };
@@ -300,25 +303,41 @@ export default function NewStudyPage() {
         {step === 3 && (
           <Card className="mx-auto max-w-4xl">
             <CardHeader>
-              <CardTitle>Step 3 — SAP Import</CardTitle>
+              <CardTitle>Step 3 — Source Documents</CardTitle>
               <CardDescription>
-                Upload the Statistical Analysis Plan as a PDF or Word (.docx) file. It is
-                converted to Markdown, then AI extracts definitions and optional output flags
-                for your review.
+                Upload the Protocol, CRF, and SAP (PDF or Word .docx). AI reads each and extracts
+                the info used to generate and label the TLFs — you can review and edit everything
+                here and later on the Config page.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <Input type="file" accept=".pdf,.docx" onChange={(e) => setSapFile(e.target.files?.[0] ?? null)} />
+              <DocumentExtracts
+                value={documentExtracts}
+                onChange={setDocumentExtracts}
+                onApplyProtocol={(f) => {
+                  if (f.protocol_number) setProtocol(f.protocol_number);
+                  if (f.protocol_title) setTitle(f.protocol_title);
+                  if (f.indication) setIndication(f.indication);
+                }}
+              />
+
+              <div className="border-t pt-4">
+                <Label className="text-xs font-semibold">Statistical Analysis Plan (SAP)</Label>
+                <p className="mb-2 text-xs text-slate-500">
+                  Extracts SAP definitions and proposes which optional tables to include.
+                </p>
+                <Input type="file" accept=".pdf,.docx" onChange={(e) => setSapFile(e.target.files?.[0] ?? null)} />
               <div className="flex gap-2">
                 <Button onClick={handleSapUpload} disabled={!sapFile || sapMutation.isPending}>
                   <FileText className="h-4 w-4" /> Extract with AI
                 </Button>
                 <Button variant="outline" onClick={() => setStep(4)}>Skip — configure manually</Button>
               </div>
-              {sapMutation.isPending && <p className="text-sm text-slate-500">Extracting…</p>}
-              {sapExtraction && (
-                <SapReviewPanel extraction={sapExtraction} onChange={setSapExtraction} />
-              )}
+                {sapMutation.isPending && <p className="text-sm text-slate-500">Extracting…</p>}
+                {sapExtraction && (
+                  <SapReviewPanel extraction={sapExtraction} onChange={setSapExtraction} />
+                )}
+              </div>
               <div className="flex justify-between">
                 <Button variant="outline" onClick={() => setStep(2)}>
                   <ArrowLeft className="h-4 w-4" /> Back

@@ -18,7 +18,9 @@ import type {
 } from "@/types/job";
 import type {
   AnomalyResponse,
+  CrfExtractionResponse,
   NlShellResponse,
+  ProtocolExtractionResponse,
   SapExtractionResponse,
 } from "@/types/ai";
 
@@ -157,6 +159,20 @@ export const ai = {
       throw new ApiError(resp.status, `SAP extraction failed: ${resp.status}`);
     }
     return (await resp.json()) as SapExtractionResponse;
+  },
+  protocol: async (file: File): Promise<ProtocolExtractionResponse> => {
+    const form = new FormData();
+    form.append("file", file, file.name);
+    const resp = await fetch(`${API_BASE_URL}/api/ai/protocol`, { method: "POST", body: form });
+    if (!resp.ok) throw new ApiError(resp.status, `Protocol extraction failed: ${resp.status}`);
+    return (await resp.json()) as ProtocolExtractionResponse;
+  },
+  crf: async (file: File): Promise<CrfExtractionResponse> => {
+    const form = new FormData();
+    form.append("file", file, file.name);
+    const resp = await fetch(`${API_BASE_URL}/api/ai/crf`, { method: "POST", body: form });
+    if (!resp.ok) throw new ApiError(resp.status, `CRF extraction failed: ${resp.status}`);
+    return (await resp.json()) as CrfExtractionResponse;
   },
   shells: (studyId: string, instruction: string, current: Record<string, boolean>) =>
     http<NlShellResponse>("/api/ai/shells", {
