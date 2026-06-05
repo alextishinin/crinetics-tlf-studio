@@ -13,8 +13,10 @@ from models.ai import (
     AnomalyRequest,
     AnomalyResponse,
     ChatRequest,
+    CrfExtractionResponse,
     NlShellRequest,
     NlShellResponse,
+    ProtocolExtractionResponse,
     SapExtractionRequest,
     SapExtractionResponse,
 )
@@ -60,6 +62,40 @@ async def extract_sap(
     if not text.strip():
         raise HTTPException(status_code=422, detail="No extractable text in the document.")
     return ai_service.extract_sap(text)
+
+
+async def _uploaded_to_markdown(file: UploadFile) -> str:
+    """Validate, save, and convert an uploaded PDF/DOCX to Markdown text."""
+    suffix = Path(file.filename or "").suffix.lower()
+    if suffix not in sap_service.SUPPORTED_SUFFIXES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported file type '{suffix or 'unknown'}'. Upload a .pdf or .docx.",
+        )
+    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+        tmp.write(await file.read())
+        tmp_path = Path(tmp.name)
+    try:
+        text = sap_service.extract_markdown(tmp_path)
+    finally:
+        tmp_path.unlink(missing_ok=True)
+    if not text.strip():
+        raise HTTPException(status_code=422, detail="No extractable text in the document.")
+    return text
+
+
+@router.post("/protocol", response_model=ProtocolExtractionResponse)
+async def extract_protocol(file: UploadFile = File(...)) -> ProtocolExtractionResponse:
+    """Upload a Protocol (PDF/DOCX); AI extracts study-level metadata."""
+    text = await _uploaded_to_markdown(file)
+    return ai_service.extract_protocol(text)
+
+
+@router.post("/crf", response_model=CrfExtractionResponse)
+async def extract_crf(file: UploadFile = File(...)) -> CrfExtractionResponse:
+    """Upload a CRF (PDF/DOCX); AI extracts category lists for key variables."""
+    text = await _uploaded_to_markdown(file)
+    return ai_service.extract_crf(text)
 
 
 # ---------------------------------------------------------------------------

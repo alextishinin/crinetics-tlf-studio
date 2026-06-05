@@ -45,6 +45,49 @@ class SapExtractionResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Protocol extraction
+# ---------------------------------------------------------------------------
+
+class ExtractedField(BaseModel):
+    """A single extracted value with provenance and a confidence indicator."""
+    value: str = ""
+    source_excerpt: str = ""
+    confidence: Literal["high", "medium", "low"] = "medium"
+
+
+class ProtocolExtractionResponse(BaseModel):
+    """Study-level metadata extracted from the protocol, for human review.
+
+    `fields` keys are study_config metadata names: protocol_number,
+    protocol_title, indication, phase, study_design, primary_objective,
+    treatment_summary.
+    """
+    fields: dict[str, ExtractedField] = Field(default_factory=dict)
+    raw_excerpt_sample: str = ""
+    error: str | None = None
+
+
+# ---------------------------------------------------------------------------
+# CRF extraction
+# ---------------------------------------------------------------------------
+
+class CrfCategoryList(BaseModel):
+    """A categorical variable's collected values and CRF order."""
+    variable: str                              # ADaM variable, e.g. RACE, DCDECOD
+    label: str = ""                            # human label, e.g. "Race"
+    values: list[str] = Field(default_factory=list)
+    source_excerpt: str = ""
+    confidence: Literal["high", "medium", "low"] = "medium"
+
+
+class CrfExtractionResponse(BaseModel):
+    """Category lists/order the CRF defines, for human review then generation."""
+    category_lists: list[CrfCategoryList] = Field(default_factory=list)
+    raw_excerpt_sample: str = ""
+    error: str | None = None
+
+
+# ---------------------------------------------------------------------------
 # Natural-language shell selection
 # ---------------------------------------------------------------------------
 

@@ -20,9 +20,13 @@ from models.ai import (
     Anomaly,
     AnomalyResponse,
     ChatMessage,
+    CrfCategoryList,
+    CrfExtractionResponse,
+    ExtractedField,
     NlShellChange,
     NlShellResponse,
     OptionalOutputDecision,
+    ProtocolExtractionResponse,
     SapDefinitionField,
     SapExtractionResponse,
 )
@@ -137,6 +141,108 @@ def extract_sap(pdf_text: str) -> SapExtractionResponse:
             error=f"Schema mismatch: {exc}",
             raw_excerpt_sample=payload[:500],
         )
+
+
+# ---------------------------------------------------------------------------
+# Protocol extraction
+# ---------------------------------------------------------------------------
+
+_PROTOCOL_SYSTEM = """You are a clinical study expert. Read the provided
+clinical study Protocol text and extract study-level metadata as a JSON
+object that matches this schema exactly:
+
+{
+  "fields": {
+    "protocol_number":    {"value": str, "source_excerpt": str, "confidence": "high|medium|low"},
+    "protocol_title":     {"value": str, "source_excerpt": str, "confidence": "high|medium|low"},
+    "indication":         {"value": str, "source_excerpt": str, "confidence": "high|medium|low"},
+    "phase":              {"value": str, "source_excerpt": str, "confidence": "high|medium|low"},
+    "study_design":       {"value": str, "source_excerpt": str, "confidence": "high|medium|low"},
+    "primary_objective":  {"value": str, "source_excerpt": str, "confidence": "high|medium|low"},
+    "treatment_summary":  {"value": str, "source_excerpt": str, "confidence": "high|medium|low"}
+  }
+}
+
+Rules:
+- Return ONLY valid JSON. No markdown, no preamble.
+- source_excerpt must quote the verbatim sentence(s) from the protocol.
+- treatment_summary: briefly list the arms and doses (e.g. "Placebo;
+  Xanomeline Low Dose 50mg; Xanomeline High Dose 75mg").
+- Use confidence="low" and value="" when the protocol is silent.
+"""
+
+
+def extract_protocol(text: str) -> ProtocolExtractionResponse:
+    raw = _completion(_PROTOCOL_SYSTEM, text[:50_000])
+    if not raw:
+        return ProtocolExtractionResponse(error="Empty response from AI")
+    payload = _strip_fence(raw)
+    try:
+        data = json.loads(payload)
+    except json.JSONDecodeError as exc:
+        return ProtocolExtractionResponse(error=f"Malformed JSON: {exc}", raw_excerpt_sample=payload[:500])
+    try:
+        fields = {
+            k: ExtractedField.model_validate(v)
+            for k, v in (data.get("fields", {}) or {}).items()
+        }
+        return ProtocolExtractionResponse(fields=fields, raw_excerpt_sample=payload[:500])
+    except ValidationError as exc:
+        return ProtocolExtractionResponse(error=f"Schema mismatch: {exc}", raw_excerpt_sample=payload[:500])
+
+
+# ---------------------------------------------------------------------------
+# CRF extraction
+# ---------------------------------------------------------------------------
+
+_CRF_SYSTEM = """You are a clinical data manager. Read the provided Case
+Report Form (CRF) text and extract the collected categories (and their CRF
+order) for key categorical variables, as JSON matching this schema exactly:
+
+{
+  "category_lists": [
+    {
+      "variable": str,   // ADaM variable name in UPPERCASE: RACE, ETHNIC, DCDECOD, AESEV, SEX
+      "label": str,      // human label, e.g. "Race"
+      "values": [str],   // the exact category options in the order they appear on the CRF
+      "source_excerpt": str,
+      "confidence": "high|medium|low"
+    }
+  ]
+}
+
+Map CRF sections to ADaM variables:
+- Race options            -> variable "RACE"
+- Ethnicity options       -> variable "ETHNIC"
+- Reason for discontinuation / end-of-study disposition -> variable "DCDECOD"
+- Adverse event severity / intensity scale -> variable "AESEV"
+- Sex / gender            -> variable "SEX"
+
+Rules:
+- Return ONLY valid JSON. No markdown, no preamble.
+- Preserve the CRF's option wording and order exactly in "values".
+- source_excerpt must quote the verbatim CRF text listing the options.
+- Only include variables actually present on the CRF.
+"""
+
+
+def extract_crf(text: str) -> CrfExtractionResponse:
+    raw = _completion(_CRF_SYSTEM, text[:50_000])
+    if not raw:
+        return CrfExtractionResponse(error="Empty response from AI")
+    payload = _strip_fence(raw)
+    try:
+        data = json.loads(payload)
+    except json.JSONDecodeError as exc:
+        return CrfExtractionResponse(error=f"Malformed JSON: {exc}", raw_excerpt_sample=payload[:500])
+    try:
+        lists = [
+            CrfCategoryList.model_validate(c)
+            for c in (data.get("category_lists", []) or [])
+        ]
+        return CrfExtractionResponse(category_lists=lists, raw_excerpt_sample=payload[:500])
+    except ValidationError as exc:
+        return CrfExtractionResponse(error=f"Schema mismatch: {exc}", raw_excerpt_sample=payload[:500])
 
 
 # ---------------------------------------------------------------------------

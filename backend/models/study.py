@@ -101,6 +101,9 @@ class StudyUpdate(BaseModel):
     optional_outputs: dict[str, bool] | None = None
     common_ae_cutoff_pct: float | None = None
     exposure_duration_bins: list[dict[str, Any]] | None = None
+    # AI-extracted, human-reviewed document findings (protocol / crf / sap).
+    # crf.category_lists feed generation via tlf StudyConfig.crf_categories.
+    document_extracts: dict[str, Any] | None = None
 
 
 class StudySummary(BaseModel):
