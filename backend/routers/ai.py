@@ -33,22 +33,32 @@ async def extract_sap(
     file: UploadFile | None = File(default=None),
     pdf_text: str | None = None,
 ) -> SapExtractionResponse:
-    """Either upload a PDF (multipart `file`) or POST raw text."""
+    """Upload a SAP as PDF or DOCX (multipart `file`), or POST raw text.
+
+    The uploaded document is converted to Markdown server-side before it is
+    sent to the model.
+    """
     if file is None and not pdf_text:
         raise HTTPException(status_code=400, detail="Provide a `file` upload or `pdf_text`.")
 
     text = pdf_text or ""
     if file is not None:
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+        suffix = Path(file.filename or "").suffix.lower()
+        if suffix not in sap_service.SUPPORTED_SUFFIXES:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unsupported file type '{suffix or 'unknown'}'. Upload a .pdf or .docx.",
+            )
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
             tmp.write(await file.read())
             tmp_path = Path(tmp.name)
         try:
-            text = sap_service.extract_text(tmp_path)
+            text = sap_service.extract_markdown(tmp_path)
         finally:
             tmp_path.unlink(missing_ok=True)
 
     if not text.strip():
-        raise HTTPException(status_code=422, detail="No extractable text in PDF.")
+        raise HTTPException(status_code=422, detail="No extractable text in the document.")
     return ai_service.extract_sap(text)
 
 

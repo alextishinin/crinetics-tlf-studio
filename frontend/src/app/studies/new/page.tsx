@@ -302,12 +302,13 @@ export default function NewStudyPage() {
             <CardHeader>
               <CardTitle>Step 3 — SAP Import</CardTitle>
               <CardDescription>
-                Upload the Statistical Analysis Plan PDF. AI will extract definitions and optional output flags
+                Upload the Statistical Analysis Plan as a PDF or Word (.docx) file. It is
+                converted to Markdown, then AI extracts definitions and optional output flags
                 for your review.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <Input type="file" accept=".pdf" onChange={(e) => setSapFile(e.target.files?.[0] ?? null)} />
+              <Input type="file" accept=".pdf,.docx" onChange={(e) => setSapFile(e.target.files?.[0] ?? null)} />
               <div className="flex gap-2">
                 <Button onClick={handleSapUpload} disabled={!sapFile || sapMutation.isPending}>
                   <FileText className="h-4 w-4" /> Extract with AI
