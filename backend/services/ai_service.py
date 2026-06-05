@@ -196,29 +196,168 @@ def interpret_shell_instruction(
 # ---------------------------------------------------------------------------
 
 _CHAT_SYSTEM = """You are a clinical programming expert helping a
-biostatistician understand a single generated table. The user can ask
-questions about the table's contents, the underlying ADaM data, the
-relevant SAP definitions, or formatting / CDISC standards.
+biostatistician understand a generated table AND the underlying study
+data. You can answer questions about the table's contents, the SAP
+definitions, formatting / CDISC standards, and — using the
+`query_dataset` tool — patient-level or any data questions against the
+study's ADaM datasets.
 
-The user message will include the table's shell specification, the
-rendered data (as a small text table), and the study's analysis sets
-and SAP definitions. Cite the specific cell, footnote, or rule when
-answering. Keep responses concise."""
+When a question needs raw data (e.g. "list the subject IDs who
+discontinued due to an adverse event", "how many subjects had a serious
+AE", "what is subject 1015's age"), call `query_dataset` instead of
+saying the table can't provide it. You may call it multiple times: first
+to inspect distinct values of a variable if you're unsure which
+column/value to filter on, then again to get the answer.
+
+Notes on this study's ADaM data:
+- ADSL is one row per subject; USUBJID is the subject identifier and
+  TRT01P / TRT01PN is the planned treatment arm.
+- Disposition reasons live in ADSL (e.g. DCDECOD / DCSREAS). Study-level
+  vs. treatment-level discontinuation may use different variables — if
+  unsure, query distinct values first.
+- Report counts using n_matched (the true total), not just the number of
+  rows returned (which is capped). Cite the dataset and filter you used.
+Keep responses concise."""
 
 
-def chat_stream(messages: list[ChatMessage], context: dict[str, Any]) -> Iterator[str]:
-    """Stream a response. Caller yields each chunk to the HTTP response."""
-    system = _CHAT_SYSTEM + "\n\nContext for this conversation:\n" + json.dumps(context, indent=2)[:8000]
+def _query_dataset_tool() -> dict[str, Any]:
+    return {
+        "name": "query_dataset",
+        "description": (
+            "Query one of this study's ADaM datasets (read-only) to answer "
+            "patient-level or any data questions the rendered table cannot. "
+            "Filters are combined with AND. Returns matching rows (capped) "
+            "plus n_matched (the true total count)."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "dataset": {
+                    "type": "string",
+                    "description": "Dataset name, e.g. adsl, adae, advs, adlbc.",
+                },
+                "columns": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Columns to return. Omit to return all columns.",
+                },
+                "filters": {
+                    "type": "array",
+                    "description": "Conditions combined with AND.",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "column": {"type": "string"},
+                            "op": {
+                                "type": "string",
+                                "enum": [
+                                    "==", "!=", ">", "<", ">=", "<=",
+                                    "in", "not_in", "contains",
+                                    "is_null", "not_null",
+                                ],
+                            },
+                            "value": {
+                                "description": "Comparison value; array for in/not_in; omit for is_null/not_null.",
+                            },
+                        },
+                        "required": ["column", "op"],
+                    },
+                },
+                "distinct": {
+                    "type": "boolean",
+                    "description": "Return only distinct rows (useful to inspect a column's values).",
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "Max rows to return (default 100, max 1000).",
+                },
+            },
+            "required": ["dataset"],
+        },
+    }
+
+
+def _run_query_tool(study_id: str, tool_input: dict[str, Any]) -> dict[str, Any]:
+    from services import data_service
+
+    return data_service.query_dataset(
+        study_id,
+        dataset=tool_input.get("dataset"),
+        columns=tool_input.get("columns"),
+        filters=tool_input.get("filters"),
+        distinct=bool(tool_input.get("distinct", False)),
+        limit=tool_input.get("limit"),
+    )
+
+
+def chat_stream(
+    messages: list[ChatMessage], context: dict[str, Any], study_id: str
+) -> Iterator[str]:
+    """Answer a chat turn, using the query_dataset tool when needed.
+
+    Runs an agentic tool-use loop server-side, then yields the final text.
+    """
+    from services import data_service
+
     try:
-        with _client().messages.stream(
-            model=_model(),
-            max_tokens=2048,
-            system=system,
-            messages=[{"role": m.role, "content": m.content} for m in messages],
-        ) as stream:
-            for chunk in stream.text_stream:
-                if chunk:
-                    yield chunk
+        schemas = data_service.dataset_schemas(study_id)
+        schema_text = "\n".join(
+            f"- {s['name']} ({s['n_rows']} rows): {', '.join(s['columns'])}"
+            for s in schemas
+        )
+    except Exception:
+        schema_text = "(dataset schema unavailable)"
+
+    system = (
+        _CHAT_SYSTEM
+        + "\n\nRendered table & study context:\n"
+        + json.dumps(context, indent=2, default=str)[:6000]
+        + "\n\nADaM datasets you can query (name, rows, columns):\n"
+        + schema_text
+    )
+
+    convo: list[dict[str, Any]] = [
+        {"role": m.role, "content": m.content} for m in messages
+    ]
+    tools = [_query_dataset_tool()]
+    client = _client()
+
+    try:
+        for _ in range(6):  # cap tool rounds to avoid loops
+            resp = client.messages.create(
+                model=_model(),
+                max_tokens=2048,
+                system=system,
+                tools=tools,
+                messages=convo,
+            )
+            if resp.stop_reason == "tool_use":
+                convo.append({"role": "assistant", "content": resp.content})
+                results = []
+                for block in resp.content:
+                    if getattr(block, "type", None) != "tool_use":
+                        continue
+                    if block.name == "query_dataset":
+                        result = _run_query_tool(study_id, dict(block.input))
+                    else:
+                        result = {"error": f"Unknown tool '{block.name}'"}
+                    results.append({
+                        "type": "tool_result",
+                        "tool_use_id": block.id,
+                        "content": json.dumps(result, default=str)[:20000],
+                    })
+                convo.append({"role": "user", "content": results})
+                continue
+
+            # Final answer.
+            text = "".join(
+                getattr(b, "text", "") for b in resp.content
+                if getattr(b, "type", None) == "text"
+            )
+            yield text or "(no answer produced)"
+            return
+
+        yield "[AI error: too many tool calls without a final answer]"
     except Exception as exc:
         yield f"[AI error: {exc}]"
 

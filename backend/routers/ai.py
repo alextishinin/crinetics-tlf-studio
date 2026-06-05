@@ -94,12 +94,17 @@ def nl_shells(payload: NlShellRequest) -> NlShellResponse:
 
 @router.post("/chat")
 def chat(payload: ChatRequest):
+    # Preview is best-effort context: a question may be purely about the data,
+    # so don't fail the whole chat if this one table can't render.
     try:
         preview = preview_service.generate_preview(payload.study_id, payload.table_id)
+        if isinstance(preview, dict) and preview.get("kind") == "figure":
+            # Drop the base64 image — it would swamp the prompt budget.
+            preview = {k: v for k, v in preview.items() if k != "image"}
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except Exception as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
+        preview = {"error": f"table preview unavailable: {type(exc).__name__}: {exc}"}
 
     config = study_service.read_config(payload.study_id)
     context = {
@@ -113,7 +118,7 @@ def chat(payload: ChatRequest):
     }
 
     def _stream():
-        for chunk in ai_service.chat_stream(payload.messages, context):
+        for chunk in ai_service.chat_stream(payload.messages, context, payload.study_id):
             yield chunk
 
     return StreamingResponse(_stream(), media_type="text/plain")

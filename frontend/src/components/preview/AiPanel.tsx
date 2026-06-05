@@ -53,7 +53,9 @@ export function AiPanel({ studyId, tableId, anomalies, onScanAnomalies, isScanni
           <div className="flex-1 space-y-3 overflow-auto text-sm">
             {messages.length === 0 && (
               <p className="text-xs text-slate-500">
-                Ask anything about this table — n counts, footnote rules, expected ranges, CDISC standards.
+                Ask anything about this table or the underlying patient-level data — n counts,
+                footnote rules, CDISC standards, or queries like &ldquo;list the subject IDs who
+                discontinued due to an AE.&rdquo;
               </p>
             )}
             {messages.map((m, i) => (
