@@ -121,6 +121,8 @@ export const preview = {
     http<PreviewData>(`/api/studies/${studyId}/preview/${tableId}`, {
       method: "POST",
     }),
+  rtfUrl: (studyId: string, tableId: string) =>
+    `${API_BASE_URL}/api/studies/${studyId}/preview/${tableId}/rtf`,
 };
 
 // ---- outputs ----

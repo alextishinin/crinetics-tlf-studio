@@ -9,7 +9,7 @@ import { TablePreview } from "@/components/preview/TablePreview";
 import { FigurePreview } from "@/components/preview/FigurePreview";
 import { AiPanel } from "@/components/preview/AiPanel";
 import { useAnomalies, usePreview } from "@/hooks/usePreview";
-import { outputs } from "@/lib/api";
+import { preview } from "@/lib/api";
 
 export default function TablePreviewPage() {
   const params = useParams<{ studyId: string; tableId: string }>();
@@ -50,13 +50,8 @@ export default function TablePreviewPage() {
               <Copy className="h-4 w-4" /> Copy
             </Button>
             <Button variant="outline" disabled={!data || isFigure} asChild>
-              {/* Download link is best-effort — assumes the user has generated the RTF previously. */}
-              <a
-                href={outputs.downloadUrl(
-                  params.studyId,
-                  `CDISCPILOT01_Table_${params.tableId.replace(/^t_/, "").replace(/_/g, ".")}`,
-                )}
-              >
+              {/* Generates the RTF on demand from current data, then downloads it. */}
+              <a href={preview.rtfUrl(params.studyId, params.tableId)}>
                 <Download className="h-4 w-4" /> Download RTF
               </a>
             </Button>

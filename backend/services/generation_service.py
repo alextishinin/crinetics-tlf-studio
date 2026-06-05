@@ -198,6 +198,15 @@ def run_inline(study_id: str, job_id: str) -> JobRecord:
         )
 
 
+def generate_file(study_id: str, table_id: str) -> Path:
+    """Generate a single shell's output file on demand and return its path.
+
+    Used by the preview page's "Download RTF" action so a user can grab the
+    file without having run a full generation job first.
+    """
+    return _do_generate(study_id, table_id)
+
+
 def _do_generate(study_id: str, table_id: str) -> Path:
     """Bridge from a shell id to the matching tlf-library function call."""
     from tlf.config import load_shell_registry, load_study_config
