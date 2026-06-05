@@ -7,6 +7,8 @@ formatted TableSpec the tlf library produces, we temporarily monkey-patch
 
 from __future__ import annotations
 
+import base64
+import tempfile
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
@@ -47,6 +49,12 @@ def generate_preview(study_id: str, table_id: str) -> dict[str, Any]:
     if table_id not in dispatch:
         raise ValueError(f"Unknown table id: {table_id}")
 
+    # Figures (f_* shells) are drawn with matplotlib and saved as a PNG; they
+    # never call render_table, so there is no TableSpec to capture. Generate
+    # the image and return it as a data URL instead.
+    if table_id.startswith("f_"):
+        return _figure_preview(table_id, cfg, registry, dispatch)
+
     spec_box: dict[str, TableSpec | None] = {"spec": None}
 
     def _capture(spec: TableSpec, **kwargs: Any) -> Path:
@@ -85,6 +93,36 @@ def generate_preview(study_id: str, table_id: str) -> dict[str, Any]:
     return _spec_to_json(spec, cfg)
 
 
+def _figure_preview(
+    figure_id: str, cfg: Any, registry: Any, dispatch: dict[str, Any]
+) -> dict[str, Any]:
+    """Generate a figure to a temp dir and return it as a base64 PNG payload."""
+    with tempfile.TemporaryDirectory() as tmp:
+        path = dispatch[figure_id](cfg, registry, out_dir=Path(tmp), run_dt=datetime.now())
+        png = Path(path)
+        if not png.exists() or png.suffix.lower() != ".png":
+            raise RuntimeError("Figure generation did not produce a PNG image")
+        encoded = base64.b64encode(png.read_bytes()).decode("ascii")
+
+    shell = registry.shells.get(figure_id, {}) if hasattr(registry, "shells") else {}
+    title = [
+        _preview_text(shell.get("title_line1", "")),
+        _preview_text(shell.get("title_line2", "")),
+        _preview_text(shell.get("title_line3", "")),
+    ]
+    return {
+        "kind": "figure",
+        "shell_id": figure_id,
+        "title": title,
+        "header_text": _preview_text(
+            f"Crinetics Pharmaceuticals    {cfg.protocol_number}"
+        ),
+        "image": f"data:image/png;base64,{encoded}",
+        "source": cfg.source_code_location,
+        "page_indicator": "Page 1 of 1",
+    }
+
+
 def _coerce_table_id(table_id: str, dispatch: dict[str, Any]) -> str:
     """Accept old output-derived preview IDs and map them to shell IDs.
 
@@ -108,6 +146,7 @@ def _coerce_table_id(table_id: str, dispatch: dict[str, Any]) -> str:
 
 def _spec_to_json(spec: Any, cfg: Any) -> dict[str, Any]:
     return {
+        "kind": "table",
         "shell_id": spec.shell_id,
         "title": [_preview_text(t) for t in spec.title],
         "header_text": _preview_text(f"Crinetics Pharmaceuticals    {cfg.protocol_number}"),

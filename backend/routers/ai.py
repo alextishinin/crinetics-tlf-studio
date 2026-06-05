@@ -131,4 +131,7 @@ def anomalies(payload: AnomalyRequest) -> AnomalyResponse:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+    # Anomaly detection is row/value based; figures have no tabular data.
+    if preview.get("kind") == "figure":
+        return AnomalyResponse(anomalies=[])
     return ai_service.detect_anomalies(preview)

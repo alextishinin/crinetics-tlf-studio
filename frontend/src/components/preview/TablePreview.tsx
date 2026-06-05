@@ -1,8 +1,8 @@
 "use client";
 import { cn } from "@/lib/utils";
-import type { PreviewData } from "@/types/job";
+import type { TablePreviewData } from "@/types/job";
 
-export function TablePreview({ data }: { data: PreviewData }) {
+export function TablePreview({ data }: { data: TablePreviewData }) {
   // The first column is the row-label column; everything after is an arm.
   return (
     <div className="rounded-md border bg-white p-6 font-serif text-sm">

@@ -20,7 +20,8 @@ export interface JobSubmitResponse {
   jobs: JobRecord[];
 }
 
-export interface PreviewData {
+export interface TablePreviewData {
+  kind?: "table";
   shell_id: string;
   title: [string, string, string];
   header_text: string;
@@ -31,6 +32,18 @@ export interface PreviewData {
   source: string;
   page_indicator: string;
 }
+
+export interface FigurePreviewData {
+  kind: "figure";
+  shell_id: string;
+  title: [string, string, string];
+  header_text: string;
+  image: string; // data URL (data:image/png;base64,...)
+  source: string;
+  page_indicator: string;
+}
+
+export type PreviewData = TablePreviewData | FigurePreviewData;
 
 export interface OutputRecord {
   output_id: string;

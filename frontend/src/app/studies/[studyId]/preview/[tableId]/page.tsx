@@ -6,6 +6,7 @@ import { Copy, Download, Flag, PlayCircle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/layout/Header";
 import { TablePreview } from "@/components/preview/TablePreview";
+import { FigurePreview } from "@/components/preview/FigurePreview";
 import { AiPanel } from "@/components/preview/AiPanel";
 import { useAnomalies, usePreview } from "@/hooks/usePreview";
 import { outputs } from "@/lib/api";
@@ -15,19 +16,20 @@ export default function TablePreviewPage() {
   const previewMutation = usePreview(params.studyId, params.tableId);
   const anomaliesMutation = useAnomalies(params.studyId, params.tableId);
 
-  // Auto-scan anomalies once the preview returns.
+  const data = previewMutation.data;
+  const isFigure = data?.kind === "figure";
+
+  // Auto-scan anomalies once a TABLE preview returns. Figures have no rows.
   useEffect(() => {
-    if (previewMutation.data && !anomaliesMutation.isPending) {
+    if (data && !isFigure && !anomaliesMutation.isPending) {
       anomaliesMutation.mutate();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [previewMutation.data]);
 
   const handleCopy = () => {
-    if (!previewMutation.data) return;
-    const rows = previewMutation.data.body_rows
-      .map((r) => r.join("\t"))
-      .join("\n");
+    if (!data || data.kind === "figure") return;
+    const rows = data.body_rows.map((r) => r.join("\t")).join("\n");
     void navigator.clipboard.writeText(rows);
   };
 
@@ -44,10 +46,10 @@ export default function TablePreviewPage() {
             >
               <RefreshCw className="h-4 w-4" /> {previewMutation.data ? "Regenerate" : "Generate"}
             </Button>
-            <Button variant="outline" disabled={!previewMutation.data} onClick={handleCopy}>
+            <Button variant="outline" disabled={!data || isFigure} onClick={handleCopy}>
               <Copy className="h-4 w-4" /> Copy
             </Button>
-            <Button variant="outline" disabled={!previewMutation.data} asChild>
+            <Button variant="outline" disabled={!data || isFigure} asChild>
               {/* Download link is best-effort — assumes the user has generated the RTF previously. */}
               <a
                 href={outputs.downloadUrl(
@@ -58,7 +60,7 @@ export default function TablePreviewPage() {
                 <Download className="h-4 w-4" /> Download RTF
               </a>
             </Button>
-            <Button variant="outline" disabled={!previewMutation.data}>
+            <Button variant="outline" disabled={!data}>
               <Flag className="h-4 w-4" /> Flag Issue
             </Button>
           </div>
@@ -81,7 +83,12 @@ export default function TablePreviewPage() {
               {String(previewMutation.error)}
             </div>
           )}
-          {previewMutation.data && <TablePreview data={previewMutation.data} />}
+          {data &&
+            (data.kind === "figure" ? (
+              <FigurePreview data={data} />
+            ) : (
+              <TablePreview data={data} />
+            ))}
         </div>
         <AiPanel
           studyId={params.studyId}
