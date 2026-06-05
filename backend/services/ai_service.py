@@ -1,7 +1,7 @@
 """Anthropic-backed AI features.
 
 Every entrypoint here is built to:
-  - Use claude-sonnet-4-20250514 (configurable via ANTHROPIC_MODEL)
+  - Use claude-sonnet-4-6 (configurable via ANTHROPIC_MODEL)
   - Validate JSON responses with Pydantic before returning to the frontend
   - Surface raw model output in `error` field when parsing fails so the
     frontend can show a graceful fallback

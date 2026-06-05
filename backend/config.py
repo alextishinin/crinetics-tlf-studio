@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=str(_ENV_FILE), extra="ignore")
 
     anthropic_api_key: str = ""
-    anthropic_model: str = "claude-sonnet-4-20250514"
+    anthropic_model: str = "claude-sonnet-4-6"
 
     studies_root: Path = Path("./studies")
     tlf_automation_path: Path = Path("../crinetics-tlf-automation")
@@ -41,9 +41,27 @@ def get_settings() -> Settings:
     global _settings
     if _settings is None:
         _settings = Settings()
+        # The backend reads backend/.env, but users often drop the API key in
+        # the project-root .env instead. Fall back to it so either works.
+        if not _settings.anthropic_api_key:
+            _settings.anthropic_api_key = _api_key_from_root_env()
         _ensure_tlf_importable(_settings.tlf_automation_path)
         _settings.studies_root.mkdir(parents=True, exist_ok=True)
     return _settings
+
+
+def _api_key_from_root_env() -> str:
+    """Read ANTHROPIC_API_KEY from the project-root .env (one level above
+    backend/) as a fallback when it isn't set in backend/.env."""
+    root_env = Path(__file__).parent.parent / ".env"
+    if not root_env.exists():
+        return ""
+    for raw in root_env.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if line.startswith("#") or not line.startswith("ANTHROPIC_API_KEY="):
+            continue
+        return line.split("=", 1)[1].strip()
+    return ""
 
 
 def _ensure_tlf_importable(automation_path: Path) -> None:

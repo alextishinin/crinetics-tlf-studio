@@ -22,7 +22,7 @@ services:
       TLF_REGISTRY_PATH: /opt/tlf-automation/shells/registry.yaml
       TLF_DEFAULT_CONFIG_PATH: /opt/tlf-automation/config/study_config.yaml
       REDIS_URL: redis://redis:6379/0
-      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-sonnet-4-20250514}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-sonnet-4-6}
     volumes:
       - ./studies:/data/studies
       - ../crinetics-tlf-automation:/opt/tlf-automation:ro
@@ -42,7 +42,7 @@ services:
       TLF_REGISTRY_PATH: /opt/tlf-automation/shells/registry.yaml
       TLF_DEFAULT_CONFIG_PATH: /opt/tlf-automation/config/study_config.yaml
       REDIS_URL: redis://redis:6379/0
-      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-sonnet-4-20250514}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-sonnet-4-6}
     volumes:
       - ./studies:/data/studies
       - ../crinetics-tlf-automation:/opt/tlf-automation:ro
