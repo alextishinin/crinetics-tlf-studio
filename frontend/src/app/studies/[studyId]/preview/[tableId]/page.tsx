@@ -61,8 +61,8 @@ export default function TablePreviewPage() {
           </div>
         }
       />
-      <div className="grid grid-cols-1 gap-4 overflow-auto p-6 lg:grid-cols-[1fr_360px]">
-        <div>
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 p-6 lg:grid-cols-[1fr_360px]">
+        <div className="min-h-0 overflow-auto">
           {!previewMutation.data && !previewMutation.isPending && (
             <div className="rounded-md border-2 border-dashed p-12 text-center">
               <PlayCircle className="mx-auto mb-3 h-8 w-8 text-slate-400" />

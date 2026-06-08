@@ -155,6 +155,7 @@ object that matches this schema exactly:
   "fields": {
     "protocol_number":    {"value": str, "source_excerpt": str, "confidence": "high|medium|low"},
     "protocol_title":     {"value": str, "source_excerpt": str, "confidence": "high|medium|low"},
+    "drug":               {"value": str, "source_excerpt": str, "confidence": "high|medium|low"},
     "indication":         {"value": str, "source_excerpt": str, "confidence": "high|medium|low"},
     "phase":              {"value": str, "source_excerpt": str, "confidence": "high|medium|low"},
     "study_design":       {"value": str, "source_excerpt": str, "confidence": "high|medium|low"},
@@ -166,6 +167,8 @@ object that matches this schema exactly:
 Rules:
 - Return ONLY valid JSON. No markdown, no preamble.
 - source_excerpt must quote the verbatim sentence(s) from the protocol.
+- drug: the investigational drug / compound name or number (e.g.
+  "CRN09682" or "Xanomeline"), not the dose.
 - treatment_summary: briefly list the arms and doses (e.g. "Placebo;
   Xanomeline Low Dose 50mg; Xanomeline High Dose 75mg").
 - Use confidence="low" and value="" when the protocol is silent.
@@ -430,13 +433,23 @@ def chat_stream(
 
     try:
         for _ in range(6):  # cap tool rounds to avoid loops
-            resp = client.messages.create(
+            streamed_any = False
+            # Stream each turn so text tokens reach the client as they are
+            # produced. get_final_message() still gives us the assembled
+            # response (incl. tool_use blocks) to drive the tool loop.
+            with client.messages.stream(
                 model=_model(),
                 max_tokens=2048,
                 system=system,
                 tools=tools,
                 messages=convo,
-            )
+            ) as stream:
+                for text in stream.text_stream:
+                    if text:
+                        streamed_any = True
+                        yield text
+                resp = stream.get_final_message()
+
             if resp.stop_reason == "tool_use":
                 convo.append({"role": "assistant", "content": resp.content})
                 results = []
@@ -455,12 +468,9 @@ def chat_stream(
                 convo.append({"role": "user", "content": results})
                 continue
 
-            # Final answer.
-            text = "".join(
-                getattr(b, "text", "") for b in resp.content
-                if getattr(b, "type", None) == "text"
-            )
-            yield text or "(no answer produced)"
+            # Final answer already streamed above.
+            if not streamed_any:
+                yield "(no answer produced)"
             return
 
         yield "[AI error: too many tool calls without a final answer]"

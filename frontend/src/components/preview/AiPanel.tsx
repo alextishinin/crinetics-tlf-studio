@@ -1,6 +1,6 @@
 "use client";
 import { Send } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,6 +27,13 @@ export function AiPanel({ studyId, tableId, anomalies, onScanAnomalies, isScanni
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
   const [dismissed, setDismissed] = useState<Set<number>>(new Set());
+  const listRef = useRef<HTMLDivElement>(null);
+
+  // Keep the latest text in view as it streams in.
+  useEffect(() => {
+    const el = listRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [messages]);
 
   const send = async () => {
     if (!input.trim() || streaming) return;
@@ -44,13 +51,13 @@ export function AiPanel({ studyId, tableId, anomalies, onScanAnomalies, isScanni
   };
 
   return (
-    <div className="flex h-full flex-col gap-4">
+    <div className="flex h-full min-h-0 flex-col gap-4">
       <Card className="flex-1 flex flex-col min-h-0">
         <CardHeader>
           <CardTitle className="text-base">AI Assistant</CardTitle>
         </CardHeader>
         <CardContent className="flex-1 flex flex-col gap-2 min-h-0">
-          <div className="flex-1 space-y-3 overflow-auto text-sm">
+          <div ref={listRef} className="flex-1 space-y-3 overflow-auto text-sm">
             {messages.length === 0 && (
               <p className="text-xs text-slate-500">
                 Ask anything about this table or the underlying patient-level data — n counts,
