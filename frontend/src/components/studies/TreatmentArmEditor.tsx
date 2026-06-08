@@ -4,6 +4,7 @@ import { ArrowDown, ArrowUp, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import type { TreatmentArm } from "@/types/study";
 
 interface Props {
@@ -38,7 +39,13 @@ export function TreatmentArmEditor({ arms, onChange }: Props) {
           </div>
           <div className="col-span-3">
             <Label className="text-xs">Column header</Label>
-            <Input value={arm.column_header} onChange={(e) => patch(i, { column_header: e.target.value })} />
+            <Textarea
+              rows={2}
+              className="resize-none"
+              value={arm.column_header}
+              onChange={(e) => patch(i, { column_header: e.target.value })}
+            />
+            <p className="mt-0.5 text-[10px] text-slate-400">Each line is a header row in the output.</p>
           </div>
           <div className="col-span-2">
             <Label className="text-xs">Target dose (mg)</Label>
