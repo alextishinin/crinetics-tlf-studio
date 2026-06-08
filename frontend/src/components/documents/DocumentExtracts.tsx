@@ -1,14 +1,15 @@
 "use client";
-import { useState } from "react";
-import { FileText, Trash2, Upload } from "lucide-react";
+import { useEffect, useState } from "react";
+import { CheckCircle2, FileText, Loader2, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { SapReviewPanel } from "@/components/ai/SapReviewPanel";
 import { ai } from "@/lib/api";
-import type { ExtractedField } from "@/types/ai";
+import type { ExtractedField, SapExtractionResponse } from "@/types/ai";
 
 // Shape stored under study_config.yaml -> document_extracts.
 export interface CrfCategory {
@@ -19,13 +20,22 @@ export interface CrfCategory {
 export interface DocumentExtractsValue {
   protocol?: { source_file?: string; fields?: Record<string, ExtractedField> };
   crf?: { source_file?: string; category_lists?: Record<string, CrfCategory> };
+  sap?: { source_file?: string };
 }
+
+type BusyKind = "protocol" | "crf" | "sap";
+const BUSY_LABELS: Record<BusyKind, string> = {
+  protocol: "protocol",
+  crf: "CRF",
+  sap: "SAP",
+};
 
 // Protocol fields we surface for review (besides the identifiers, which are
 // applied to the main study fields via onApplyProtocol).
 const PROTOCOL_FIELD_ORDER = [
   "protocol_number",
   "protocol_title",
+  "drug",
   "indication",
   "phase",
   "study_design",
@@ -35,6 +45,7 @@ const PROTOCOL_FIELD_ORDER = [
 const PROTOCOL_LABELS: Record<string, string> = {
   protocol_number: "Protocol number",
   protocol_title: "Protocol title",
+  drug: "Drug",
   indication: "Indication",
   phase: "Phase",
   study_design: "Study design",
@@ -48,11 +59,23 @@ interface Props {
   // Called when the user clicks "Apply to study fields" so the parent can
   // copy protocol_number / protocol_title / indication into the real config.
   onApplyProtocol?: (fields: Record<string, string>) => void;
+  // When provided, the SAP upload card is shown and extraction results are
+  // handed back to the parent. Omit to hide SAP (e.g. on the config page,
+  // which has its own manual SAP editor).
+  sapExtraction?: SapExtractionResponse | null;
+  onSapExtracted?: (res: SapExtractionResponse) => void;
 }
 
-export function DocumentExtracts({ value, onChange, onApplyProtocol }: Props) {
-  const [busy, setBusy] = useState<"protocol" | "crf" | null>(null);
+export function DocumentExtracts({
+  value,
+  onChange,
+  onApplyProtocol,
+  sapExtraction,
+  onSapExtracted,
+}: Props) {
+  const [busy, setBusy] = useState<BusyKind | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [applied, setApplied] = useState(false);
 
   const handleProtocol = async (file: File | undefined) => {
     if (!file) return;
@@ -92,6 +115,21 @@ export function DocumentExtracts({ value, onChange, onApplyProtocol }: Props) {
     }
   };
 
+  const handleSap = async (file: File | undefined) => {
+    if (!file || !onSapExtracted) return;
+    setError(null);
+    setBusy("sap");
+    try {
+      const res = await ai.sap(file);
+      onChange({ ...value, sap: { source_file: file.name } });
+      onSapExtracted(res);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const protocolFields = value.protocol?.fields ?? {};
   const crfLists = value.crf?.category_lists ?? {};
 
@@ -104,6 +142,23 @@ export function DocumentExtracts({ value, onChange, onApplyProtocol }: Props) {
       },
     });
   };
+
+  const handleApply = () => {
+    onApplyProtocol?.({
+      protocol_number: protocolFields.protocol_number?.value ?? "",
+      protocol_title: protocolFields.protocol_title?.value ?? "",
+      drug: protocolFields.drug?.value ?? "",
+      indication: protocolFields.indication?.value ?? "",
+    });
+    setApplied(true);
+  };
+
+  // Clear the transient "Applied" confirmation after a moment.
+  useEffect(() => {
+    if (!applied) return;
+    const t = setTimeout(() => setApplied(false), 2000);
+    return () => clearTimeout(t);
+  }, [applied]);
 
   const setCrfValues = (variable: string, text: string) => {
     const values = text.split("\n").map((l) => l.trim()).filter(Boolean);
@@ -129,6 +184,8 @@ export function DocumentExtracts({ value, onChange, onApplyProtocol }: Props) {
 
   return (
     <div className="space-y-4">
+      {busy && <ExtractionOverlay label={BUSY_LABELS[busy]} />}
+
       {error && (
         <div className="rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">{error}</div>
       )}
@@ -151,7 +208,6 @@ export function DocumentExtracts({ value, onChange, onApplyProtocol }: Props) {
               disabled={busy !== null}
               onChange={(e) => handleProtocol(e.target.files?.[0])}
             />
-            {busy === "protocol" && <span className="text-xs text-slate-500">Extracting…</span>}
           </div>
           {orderedProtocolKeys.length > 0 && (
             <div className="space-y-3">
@@ -171,15 +227,18 @@ export function DocumentExtracts({ value, onChange, onApplyProtocol }: Props) {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() =>
-                    onApplyProtocol({
-                      protocol_number: protocolFields.protocol_number?.value ?? "",
-                      protocol_title: protocolFields.protocol_title?.value ?? "",
-                      indication: protocolFields.indication?.value ?? "",
-                    })
-                  }
+                  onClick={handleApply}
+                  className={applied ? "border-emerald-300 text-emerald-700" : ""}
                 >
-                  <FileText className="h-4 w-4" /> Apply identifiers to study fields
+                  {applied ? (
+                    <>
+                      <CheckCircle2 className="h-4 w-4 text-emerald-600" /> Applied to study fields
+                    </>
+                  ) : (
+                    <>
+                      <FileText className="h-4 w-4" /> Apply identifiers to study fields
+                    </>
+                  )}
                 </Button>
               )}
             </div>
@@ -207,7 +266,6 @@ export function DocumentExtracts({ value, onChange, onApplyProtocol }: Props) {
               disabled={busy !== null}
               onChange={(e) => handleCrf(e.target.files?.[0])}
             />
-            {busy === "crf" && <span className="text-xs text-slate-500">Extracting…</span>}
           </div>
           {Object.keys(crfLists).length === 0 ? (
             <p className="text-xs text-slate-500">No CRF categories yet. Upload a CRF to extract them.</p>
@@ -244,6 +302,46 @@ export function DocumentExtracts({ value, onChange, onApplyProtocol }: Props) {
           )}
         </CardContent>
       </Card>
+
+      {/* ---- SAP (only when the parent wires it up) ---- */}
+      {onSapExtracted && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Statistical Analysis Plan (SAP)</CardTitle>
+            <CardDescription>
+              Upload the SAP (PDF/DOCX). AI extracts SAP definitions and proposes which optional
+              tables to include — review and edit below.
+              {value.sap?.source_file ? ` Source: ${value.sap.source_file}` : ""}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Input
+                type="file"
+                accept=".pdf,.docx"
+                className="max-w-xs"
+                disabled={busy !== null}
+                onChange={(e) => handleSap(e.target.files?.[0])}
+              />
+            </div>
+            {sapExtraction && (
+              <SapReviewPanel extraction={sapExtraction} onChange={onSapExtracted} />
+            )}
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+function ExtractionOverlay({ label }: { label: string }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/20 backdrop-blur-sm animate-in fade-in">
+      <div className="flex flex-col items-center gap-3 rounded-xl border bg-white px-12 py-10 shadow-2xl animate-in zoom-in-95">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+        <p className="text-sm font-medium text-slate-700">Extracting {label}…</p>
+        <p className="text-xs text-slate-400">The AI is reading your document. This can take a moment.</p>
+      </div>
     </div>
   );
 }

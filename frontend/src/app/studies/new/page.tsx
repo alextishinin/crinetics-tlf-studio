@@ -1,7 +1,7 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
-import { ArrowLeft, ArrowRight, CheckCircle2, FileText, Upload } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, Upload } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,13 +10,11 @@ import { Label } from "@/components/ui/label";
 import { Header } from "@/components/layout/Header";
 import { TreatmentArmEditor } from "@/components/studies/TreatmentArmEditor";
 import { AnalysisSetEditor } from "@/components/studies/AnalysisSetEditor";
-import { SapReviewPanel } from "@/components/ai/SapReviewPanel";
 import { DocumentExtracts, type DocumentExtractsValue } from "@/components/documents/DocumentExtracts";
 import {
   useCreateStudy,
   useUpdateStudy,
 } from "@/hooks/useStudy";
-import { useSapExtraction } from "@/hooks/useAi";
 import { studies as studiesApi } from "@/lib/api";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
@@ -59,13 +57,11 @@ export default function NewStudyPage() {
   const [pooledActive, setPooledActive] = useState(false);
 
   // Step 3 state
-  const [sapFile, setSapFile] = useState<File | null>(null);
   const [sapExtraction, setSapExtraction] = useState<SapExtractionResponse | null>(null);
   const [documentExtracts, setDocumentExtracts] = useState<DocumentExtractsValue>({});
 
   const createStudy = useCreateStudy();
   const updateStudy = useUpdateStudy(studyId ?? "");
-  const sapMutation = useSapExtraction();
   const queryClient = useQueryClient();
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -127,12 +123,6 @@ export default function NewStudyPage() {
     } finally {
       setUploading(false);
     }
-  };
-
-  const handleSapUpload = async () => {
-    if (!sapFile) return;
-    const result = await sapMutation.mutateAsync(sapFile);
-    setSapExtraction(result);
   };
 
   const handleCreate = async () => {
@@ -314,30 +304,16 @@ export default function NewStudyPage() {
               <DocumentExtracts
                 value={documentExtracts}
                 onChange={setDocumentExtracts}
+                sapExtraction={sapExtraction}
+                onSapExtracted={setSapExtraction}
                 onApplyProtocol={(f) => {
                   if (f.protocol_number) setProtocol(f.protocol_number);
                   if (f.protocol_title) setTitle(f.protocol_title);
+                  if (f.drug) setDrug(f.drug);
                   if (f.indication) setIndication(f.indication);
                 }}
               />
 
-              <div className="border-t pt-4">
-                <Label className="text-xs font-semibold">Statistical Analysis Plan (SAP)</Label>
-                <p className="mb-2 text-xs text-slate-500">
-                  Extracts SAP definitions and proposes which optional tables to include.
-                </p>
-                <Input type="file" accept=".pdf,.docx" onChange={(e) => setSapFile(e.target.files?.[0] ?? null)} />
-              <div className="flex gap-2">
-                <Button onClick={handleSapUpload} disabled={!sapFile || sapMutation.isPending}>
-                  <FileText className="h-4 w-4" /> Extract with AI
-                </Button>
-                <Button variant="outline" onClick={() => setStep(4)}>Skip — configure manually</Button>
-              </div>
-                {sapMutation.isPending && <p className="text-sm text-slate-500">Extracting…</p>}
-                {sapExtraction && (
-                  <SapReviewPanel extraction={sapExtraction} onChange={setSapExtraction} />
-                )}
-              </div>
               <div className="flex justify-between">
                 <Button variant="outline" onClick={() => setStep(2)}>
                   <ArrowLeft className="h-4 w-4" /> Back
@@ -357,6 +333,13 @@ export default function NewStudyPage() {
             <CardContent className="space-y-4">
               <Summary label="Protocol" value={protocol || "—"} />
               <Summary label="Title" value={title || "—"} />
+              <Summary label="Drug" value={drug || "—"} />
+              <Summary label="Indication" value={indication || "—"} />
+              <Summary
+                label="Data extract date"
+                value={dataExtractDate || "Required — not set"}
+                warn={!dataExtractDate}
+              />
               <Summary label="Treatment arms" value={`${arms.length} arms`} />
               <Summary label="Analysis sets" value={Object.keys(sets).join(", ") || "—"} />
               <Summary
@@ -402,11 +385,11 @@ function Field({
   );
 }
 
-function Summary({ label, value }: { label: string; value: string }) {
+function Summary({ label, value, warn }: { label: string; value: string; warn?: boolean }) {
   return (
-    <div className="flex justify-between border-b pb-2 text-sm">
-      <span className="text-slate-500">{label}</span>
-      <span className="font-medium">{value}</span>
+    <div className="flex justify-between gap-6 border-b pb-2 text-sm">
+      <span className="shrink-0 text-slate-500">{label}</span>
+      <span className={cn("text-right font-medium", warn && "text-rose-600")}>{value}</span>
     </div>
   );
 }
