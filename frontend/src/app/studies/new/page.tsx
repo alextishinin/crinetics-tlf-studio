@@ -19,7 +19,6 @@ import { studies as studiesApi } from "@/lib/api";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import type { AnalysisSet, TreatmentArm, UploadResult } from "@/types/study";
-import type { SapExtractionResponse } from "@/types/ai";
 
 const STEPS = [
   { id: 1, label: "Select Data" },
@@ -57,7 +56,6 @@ export default function NewStudyPage() {
   const [pooledActive, setPooledActive] = useState(false);
 
   // Step 3 state
-  const [sapExtraction, setSapExtraction] = useState<SapExtractionResponse | null>(null);
   const [documentExtracts, setDocumentExtracts] = useState<DocumentExtractsValue>({});
 
   const createStudy = useCreateStudy();
@@ -127,6 +125,7 @@ export default function NewStudyPage() {
 
   const handleCreate = async () => {
     const sid = await ensureStudy();
+    const sapExtraction = documentExtracts.sap?.extraction;
     const sapDefinitions = sapExtraction
       ? Object.fromEntries(
           Object.entries(sapExtraction.sap_definitions).map(([k, v]) => [k, v.value]),
@@ -304,8 +303,7 @@ export default function NewStudyPage() {
               <DocumentExtracts
                 value={documentExtracts}
                 onChange={setDocumentExtracts}
-                sapExtraction={sapExtraction}
-                onSapExtracted={setSapExtraction}
+                showSap
                 onApplyProtocol={(f) => {
                   if (f.protocol_number) setProtocol(f.protocol_number);
                   if (f.protocol_title) setTitle(f.protocol_title);
@@ -348,7 +346,7 @@ export default function NewStudyPage() {
               />
               <Summary
                 label="SAP imported"
-                value={sapExtraction ? "Yes (AI review applied)" : "No — manual configuration"}
+                value={documentExtracts.sap?.extraction ? "Yes (AI review applied)" : "No — manual configuration"}
               />
               <div className="flex justify-between">
                 <Button variant="outline" onClick={() => setStep(3)}>

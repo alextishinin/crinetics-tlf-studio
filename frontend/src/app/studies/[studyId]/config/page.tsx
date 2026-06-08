@@ -11,9 +11,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { Header } from "@/components/layout/Header";
 import { TreatmentArmEditor } from "@/components/studies/TreatmentArmEditor";
 import { AnalysisSetEditor } from "@/components/studies/AnalysisSetEditor";
-import { DocumentExtracts, type DocumentExtractsValue } from "@/components/documents/DocumentExtracts";
+import {
+  DocumentExtracts,
+  ExtractionOverlay,
+  FileUpload,
+  type DocumentExtractsValue,
+} from "@/components/documents/DocumentExtracts";
 import { useStudy, useUpdateStudy } from "@/hooks/useStudy";
+import { ai } from "@/lib/api";
 import type { AnalysisSet, SapDefinitions, TreatmentArm } from "@/types/study";
+import type { SapExtractionResponse } from "@/types/ai";
 
 const SAP_DEFINITION_FIELDS: { key: keyof SapDefinitions; label: string; rows?: number }[] = [
   { key: "teae_definition", label: "TEAE definition" },
@@ -60,6 +67,8 @@ export default function ConfigPage() {
   const [subgroupAnalyses, setSubgroupAnalyses] = useState("");
   const [documentExtracts, setDocumentExtracts] = useState<DocumentExtractsValue>({});
   const [saved, setSaved] = useState(false);
+  const [sapBusy, setSapBusy] = useState(false);
+  const [sapError, setSapError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!data) return;
@@ -92,6 +101,49 @@ export default function ConfigPage() {
 
   const patchSapDefinition = (key: keyof SapDefinitions, value: string) => {
     setSapDefinitions((current) => ({ ...current, [key]: value }));
+  };
+
+  // Push the reviewed SAP extraction into the canonical SAP Definitions card.
+  const applySapToDefinitions = (extraction: SapExtractionResponse) => {
+    setSapDefinitions((cur) => {
+      const next = { ...cur };
+      for (const [key, field] of Object.entries(extraction.sap_definitions ?? {})) {
+        if (key in next) (next as Record<string, unknown>)[key] = field.value;
+      }
+      if (extraction.primary_endpoint) next.primary_endpoint = extraction.primary_endpoint.value;
+      return next;
+    });
+    if (extraction.secondary_endpoints?.length) {
+      setSecondaryEndpoints(extraction.secondary_endpoints.join("\n"));
+    }
+    if (extraction.subgroup_analyses?.length) {
+      setSubgroupAnalyses(extraction.subgroup_analyses.join("\n"));
+    }
+  };
+
+  // Upload a SAP, extract it, store it on the study, and fill the fields below.
+  const handleSapUpload = async (file?: File) => {
+    if (!file) return;
+    setSapError(null);
+    setSapBusy(true);
+    try {
+      const res = await ai.sap(file);
+      if (res.error) throw new Error(res.error);
+      setDocumentExtracts((cur) => ({ ...cur, sap: { source_file: file.name, extraction: res } }));
+      applySapToDefinitions(res);
+    } catch (e) {
+      setSapError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSapBusy(false);
+    }
+  };
+
+  // The verbatim SAP sentence backing a given definition field, if extracted.
+  const sapExcerpt = (key: keyof SapDefinitions): string | undefined => {
+    const ex = documentExtracts.sap?.extraction;
+    if (!ex) return undefined;
+    if (key === "primary_endpoint") return ex.primary_endpoint?.source_excerpt || undefined;
+    return ex.sap_definitions?.[key]?.source_excerpt || undefined;
   };
 
   const splitLines = (value: string) =>
@@ -200,13 +252,45 @@ export default function ConfigPage() {
             </Card>
           </div>
 
-          {/* SAP definitions */}
+          {/* Source documents (Protocol & CRF) */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">SAP Definitions</CardTitle>
-              <CardDescription>Wording interpolated into footnotes and used to drive derivations.</CardDescription>
+              <CardTitle className="text-base">Source Documents</CardTitle>
+              <CardDescription>Upload the Protocol and CRF to extract identifiers and category orderings with AI.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <DocumentExtracts
+                value={documentExtracts}
+                onChange={setDocumentExtracts}
+                onApplyProtocol={(fields) => {
+                  if (fields.protocol_number) setProtocol(fields.protocol_number);
+                  if (fields.protocol_title) setTitle(fields.protocol_title);
+                  if (fields.drug) setDrug(fields.drug);
+                  if (fields.indication) setIndication(fields.indication);
+                }}
+              />
+            </CardContent>
+          </Card>
+
+          {/* SAP — upload and definitions in one place */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Statistical Analysis Plan (SAP)</CardTitle>
+              <CardDescription>
+                Upload the SAP to auto-fill these definitions, or edit them manually. The wording is
+                interpolated into footnotes and used to drive derivations.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {sapBusy && <ExtractionOverlay label="SAP" />}
+              {sapError && (
+                <div className="rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">{sapError}</div>
+              )}
+              <FileUpload
+                currentFile={documentExtracts.sap?.source_file}
+                disabled={sapBusy}
+                onPick={handleSapUpload}
+              />
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 {SAP_DEFINITION_FIELDS.map((field) => (
                   <Field key={field.key} label={field.label}>
@@ -215,6 +299,9 @@ export default function ConfigPage() {
                       value={(sapDefinitions[field.key] as string | undefined) ?? ""}
                       onChange={(e) => patchSapDefinition(field.key, e.target.value)}
                     />
+                    {sapExcerpt(field.key) && (
+                      <p className="text-[11px] italic text-slate-400">“{sapExcerpt(field.key)}”</p>
+                    )}
                   </Field>
                 ))}
               </div>
@@ -236,26 +323,6 @@ export default function ConfigPage() {
                   />
                 </Field>
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Source documents */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Source Documents</CardTitle>
-              <CardDescription>Upload the Protocol and CRF to extract identifiers and category orderings with AI.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <DocumentExtracts
-                value={documentExtracts}
-                onChange={setDocumentExtracts}
-                onApplyProtocol={(fields) => {
-                  if (fields.protocol_number) setProtocol(fields.protocol_number);
-                  if (fields.protocol_title) setTitle(fields.protocol_title);
-                  if (fields.drug) setDrug(fields.drug);
-                  if (fields.indication) setIndication(fields.indication);
-                }}
-              />
             </CardContent>
           </Card>
 
