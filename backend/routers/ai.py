@@ -109,7 +109,7 @@ def nl_shells(payload: NlShellRequest) -> NlShellResponse:
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
-    available: list[dict[str, str]] = []
+    available: list[dict] = []
     for group in listing.groups:
         for s in group.shells:
             available.append(
@@ -117,6 +117,7 @@ def nl_shells(payload: NlShellRequest) -> NlShellResponse:
                     "id": s.id,
                     "title": s.title_line2,
                     "conditionality": s.conditionality.value,
+                    "available": bool(s.available),
                 }
             )
     return ai_service.interpret_shell_instruction(

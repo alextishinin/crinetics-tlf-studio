@@ -1,10 +1,10 @@
 "use client";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { AlertCircle, Sparkles, Save } from "lucide-react";
+import { AlertCircle, Loader2, Sparkles, Save } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Header } from "@/components/layout/Header";
 import { ShellCard } from "@/components/shells/ShellCard";
@@ -30,6 +30,7 @@ export default function ShellsPage() {
 
   const [showBanner, setShowBanner] = useState(false);
   const [instruction, setInstruction] = useState("");
+  const [dismissed, setDismissed] = useState(false);
 
   // Seed Zustand from API.
   useEffect(() => {
@@ -70,8 +71,23 @@ export default function ShellsPage() {
 
   const handleNl = async () => {
     if (!instruction.trim()) return;
-    const result = await nlMutation.mutateAsync({ instruction, current: selections });
-    setPendingChanges(result.changes);
+    setDismissed(false);
+    try {
+      const result = await nlMutation.mutateAsync({ instruction, current: selections });
+      setPendingChanges(result.changes);
+    } catch {
+      /* nlMutation.isError drives the error UI */
+    }
+  };
+
+  const onApplyNl = () => {
+    applyPending();
+    setDismissed(true);
+    setInstruction("");
+  };
+  const onDiscardNl = () => {
+    clearPending();
+    setDismissed(true);
   };
 
   if (isLoading) return <div className="p-6 text-sm">Loading shells...</div>;
@@ -126,46 +142,100 @@ export default function ShellsPage() {
               <CardTitle className="text-base flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-primary" /> Describe what you need…
               </CardTitle>
+              <CardDescription>
+                Tell the assistant in plain English which tables and figures to include, and it
+                adjusts the checkboxes below for you — e.g. &ldquo;add the DILI plot&rdquo;,
+                &ldquo;remove the ECG tables&rdquo;, or &ldquo;select everything my data
+                supports&rdquo;. It <span className="font-medium">proposes</span> changes for you to
+                review; nothing is selected until you approve.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex gap-2">
                 <Input
-                  placeholder="e.g. Add the DILI scatter and remove ECG tables"
+                  placeholder="e.g. Select everything my data supports"
                   value={instruction}
                   onChange={(e) => setInstruction(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleNl()}
+                  disabled={nlMutation.isPending}
                 />
-                <Button onClick={handleNl} disabled={nlMutation.isPending}>Apply</Button>
+                <Button onClick={handleNl} disabled={nlMutation.isPending || !instruction.trim()}>
+                  {nlMutation.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" /> Working…
+                    </>
+                  ) : (
+                    "Apply"
+                  )}
+                </Button>
               </div>
               <div className="flex flex-wrap gap-2">
                 {SUGGESTIONS.map((s) => (
                   <button
                     key={s}
-                    className="rounded-full border bg-white px-3 py-1 text-xs hover:bg-slate-50"
+                    className="rounded-full border bg-white px-3 py-1 text-xs hover:bg-slate-50 disabled:opacity-50"
                     onClick={() => setInstruction(s)}
+                    disabled={nlMutation.isPending}
                   >
                     {s}
                   </button>
                 ))}
               </div>
-              {pendingChanges.length > 0 && (
-                <div className="rounded-md border bg-slate-50 p-3 text-sm">
-                  <div className="font-medium mb-2">Proposed changes</div>
-                  <ul className="space-y-1 text-xs">
-                    {pendingChanges.map((c) => (
-                      <li key={c.shell_id}>
-                        <span className={c.action === "add" ? "text-emerald-700" : "text-rose-700"}>
-                          {c.action === "add" ? "+" : "−"}
-                        </span>{" "}
-                        <span className="font-mono">{c.shell_id}</span> — {c.reason}
-                      </li>
-                    ))}
-                  </ul>
-                  <div className="mt-3 flex gap-2">
-                    <Button size="sm" onClick={applyPending}>Apply</Button>
-                    <Button size="sm" variant="outline" onClick={clearPending}>Discard</Button>
-                  </div>
+
+              {nlMutation.isPending && (
+                <div className="flex items-center gap-2 rounded-md border bg-slate-50 p-3 text-sm text-slate-600">
+                  <Loader2 className="h-4 w-4 animate-spin" /> The assistant is reviewing your
+                  request…
                 </div>
+              )}
+
+              {!nlMutation.isPending && nlMutation.isError && (
+                <div className="rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
+                  Couldn&apos;t reach the assistant. Make sure your API key is set in Settings, then
+                  try again.
+                </div>
+              )}
+
+              {!nlMutation.isPending && !nlMutation.isError && nlMutation.data && !dismissed && (
+                nlMutation.data.error ? (
+                  <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                    {nlMutation.data.error}
+                  </div>
+                ) : pendingChanges.length > 0 ? (
+                  <div className="rounded-md border bg-slate-50 p-3 text-sm">
+                    <div className="mb-1 font-medium">
+                      Proposed changes ({pendingChanges.length})
+                    </div>
+                    {nlMutation.data.summary && (
+                      <p className="mb-2 text-xs text-slate-600">{nlMutation.data.summary}</p>
+                    )}
+                    <ul className="space-y-1 text-xs">
+                      {pendingChanges.map((c) => (
+                        <li key={c.shell_id}>
+                          <span className={c.action === "add" ? "text-emerald-700" : "text-rose-700"}>
+                            {c.action === "add" ? "+ add" : "− remove"}
+                          </span>{" "}
+                          <span className="font-mono">{c.shell_id}</span>
+                          {c.reason ? ` — ${c.reason}` : ""}
+                        </li>
+                      ))}
+                    </ul>
+                    <div className="mt-3 flex gap-2">
+                      <Button size="sm" onClick={onApplyNl}>
+                        Apply these changes
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={onDiscardNl}>
+                        Discard
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="rounded-md border bg-slate-50 p-3 text-sm text-slate-700">
+                    <span className="font-medium">No changes.</span>{" "}
+                    {nlMutation.data.summary ||
+                      "Your current selection already matches that request."}
+                  </div>
+                )
               )}
             </CardContent>
           </Card>

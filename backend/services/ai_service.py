@@ -252,34 +252,45 @@ def extract_crf(text: str) -> CrfExtractionResponse:
 # Natural-language shell selection
 # ---------------------------------------------------------------------------
 
-_NL_SHELLS_SYSTEM = """You convert natural-language instructions into a
-JSON diff of shell selections for a clinical TLF generator.
+_NL_SHELLS_SYSTEM = """You convert a natural-language instruction into a JSON
+diff of shell (table / listing / figure) selections for a clinical TLF
+generator.
 
-Available shell ids and their flags are provided in the user message.
-Respond with ONLY valid JSON of the form:
+The user message lists every shell with:
+  - its id and conditionality: required / optional / conditional
+  - whether the study's uploaded ADaM data supports it: [data: yes] or [data: no]
+  - its title
+…and which shells are currently selected.
 
+Respond with ONLY valid JSON:
 {
   "changes": [
     {"shell_id": "t_14_3_1_13", "action": "add",    "reason": "..."},
     {"shell_id": "f_14_3_4_3",  "action": "remove", "reason": "..."}
   ],
-  "summary": "human-readable one-line summary of the changes"
+  "summary": "1-2 sentences: what you changed and why — or, if nothing, why not"
 }
 
 Rules:
-- action is "add" or "remove" only.
-- Use the shell_id exactly as listed by the user.
-- Do not include shells that are already in the desired state.
+- action is "add" or "remove" only; use the shell_id exactly as listed.
+- Never include a shell that is already in the desired state (no no-ops).
+- "select everything I can make / all available / everything the data supports"
+  => add every shell marked [data: yes] that is not already selected; never add
+  [data: no] shells.
+- Required shells are always generated — do not remove them.
+- ALWAYS provide "summary". If you return zero changes, the summary MUST explain
+  why (e.g. "Everything your data supports is already selected.").
 """
 
 
 def interpret_shell_instruction(
     instruction: str,
     current_selection: dict[str, bool],
-    available_shells: list[dict[str, str]],
+    available_shells: list[dict],
 ) -> NlShellResponse:
     shell_catalog = "\n".join(
-        f"- {s['id']} ({s.get('conditionality', 'required')}): {s.get('title', '')}"
+        f"- {s['id']} ({s.get('conditionality', 'required')}) "
+        f"[data: {'yes' if s.get('available') else 'no'}]: {s.get('title', '')}"
         for s in available_shells
     )
     current = ", ".join(sid for sid, sel in current_selection.items() if sel) or "(none)"
