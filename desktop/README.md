@@ -47,6 +47,12 @@ npm start
 
 > Ports 8000 (backend) and 3000 (frontend) must be free — close the dev
 > `launch.bat` app first, since it uses the same ports.
+>
+> The dev app (`next dev`) and the desktop app share `frontend/.next/`, so
+> running the dev app **wipes the standalone build**. `npm start` detects this
+> and rebuilds automatically (via the `prestart` hook), so you normally don't
+> have to think about it — the first launch after running the dev app just
+> takes ~30s longer.
 
 Sidecar logs are written to the Electron `userData/logs/` directory
 (`backend.log`, `frontend.log`) for troubleshooting.

@@ -59,7 +59,12 @@ function pipeToLog(child, name) {
 // --- sidecar processes -----------------------------------------------------
 function startBackend(backendExe) {
   if (!fs.existsSync(backendExe)) {
-    throw new Error(`Backend executable not found:\n${backendExe}`);
+    throw new Error(
+      `Backend not built.\n\nExpected: ${backendExe}\n\n` +
+        "Freeze it first — see backend/BUILD.md:\n" +
+        "  cd backend\n" +
+        "  .venv\\Scripts\\pyinstaller.exe backend.spec --noconfirm"
+    );
   }
   const child = spawn(backendExe, [], {
     env: {
@@ -79,7 +84,13 @@ function startBackend(backendExe) {
 function startFrontend(frontendDir) {
   const serverJs = path.join(frontendDir, "server.js");
   if (!fs.existsSync(serverJs)) {
-    throw new Error(`Frontend server not found:\n${serverJs}`);
+    throw new Error(
+      `Frontend not built.\n\nExpected: ${serverJs}\n\n` +
+        "Running the dev app (launch.bat) wipes this build. Rebuild it:\n" +
+        "  cd frontend && npm run build\n" +
+        "  cd ../desktop && npm run build:frontend\n\n" +
+        "(`npm start` normally rebuilds it automatically.)"
+    );
   }
   // Run the Next standalone server using Electron's bundled Node — no system
   // Node required on the target machine.

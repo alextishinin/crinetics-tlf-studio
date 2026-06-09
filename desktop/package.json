@@ -5,6 +5,7 @@
   "description": "TLF Studio desktop shell (Electron) — bundles the frozen backend and the Next.js UI.",
   "main": "main.js",
   "scripts": {
+    "prestart": "node scripts/ensure-frontend.mjs",
     "start": "electron .",
     "build:frontend": "node scripts/assemble-frontend.mjs"
   },
