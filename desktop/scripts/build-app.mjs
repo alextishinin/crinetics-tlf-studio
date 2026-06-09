@@ -2,14 +2,19 @@
 // frontend + Electron shell) into a fresh installer.
 //
 //   npm run build:app                 # build installer locally (no publish)
-//   npm run release:app               # bump version, sync APP_VERSION, publish
+//   npm run release:app               # build + publish to GitHub Releases
 //
-// Flags (can be appended after `--`):
-//   --release        bump patch version, sync backend APP_VERSION, publish to GitHub
-//   --no-bump        with --release, don't bump (use the version already in package.json)
+// The app version is the version of the newest entry in
+// frontend/src/data/changelog.json — the single source of truth. This script
+// syncs it into desktop/package.json and backend APP_VERSION before building,
+// so the installer filename and the in-app Settings/Updates version all match.
+// To ship a new version: add a changelog entry with a higher version, then run.
+//
+// Flags (after `--`):
+//   --release        publish the build to GitHub Releases (needs GH_TOKEN)
 //   --skip-vendor    don't re-copy the tlf library (use the committed backend/vendor)
 //
-// Steps: [bump] -> vendor tlf -> freeze backend.exe -> build frontend ->
+// Steps: sync version -> vendor tlf -> freeze backend.exe -> build frontend ->
 //        assemble standalone -> package installer (electron-builder).
 
 import { spawnSync } from "node:child_process";
@@ -26,7 +31,6 @@ const frontend = join(studioRoot, "frontend");
 const args = new Set(process.argv.slice(2));
 const release = args.has("--release");
 const skipVendor = args.has("--skip-vendor");
-const noBump = args.has("--no-bump");
 
 const pyExe = join(backend, ".venv", "Scripts", "python.exe");
 const pyInstaller = join(backend, ".venv", "Scripts", "pyinstaller.exe");
@@ -48,21 +52,37 @@ function fail(msg) {
   process.exit(1);
 }
 
-// --- 0. version bump (release only) ----------------------------------------
-if (release && !noBump) {
-  run("Bump version (patch)", "npm", ["version", "patch", "--no-git-tag-version"], {
-    cwd: desktop,
-    shell: true,
-  });
-  const version = JSON.parse(readFileSync(join(desktop, "package.json"), "utf8")).version;
+// Version = newest changelog entry. Sync it into package.json + APP_VERSION.
+function syncVersionFromChangelog() {
+  console.log("\n=== Sync version from changelog ===");
+  const clPath = join(frontend, "src", "data", "changelog.json");
+  if (!existsSync(clPath)) {
+    console.warn(`  (no changelog at ${clPath} — keeping existing version)`);
+    return;
+  }
+  const releases = JSON.parse(readFileSync(clPath, "utf8"));
+  const version = releases?.[0]?.version;
+  if (!version) {
+    console.warn("  (changelog has no top version — keeping existing version)");
+    return;
+  }
+  const pkgPath = join(desktop, "package.json");
+  const pkg = JSON.parse(readFileSync(pkgPath, "utf8"));
+  if (pkg.version !== version) {
+    pkg.version = version;
+    writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n");
+  }
   const cfgPath = join(backend, "config.py");
   const cfg = readFileSync(cfgPath, "utf8").replace(
     /APP_VERSION\s*=\s*"[^"]*"/,
     `APP_VERSION = "${version}"`
   );
   writeFileSync(cfgPath, cfg);
-  console.log(`  version -> ${version} (synced backend APP_VERSION)`);
+  console.log(`  version -> ${version}`);
 }
+
+// --- 0. sync version --------------------------------------------------------
+syncVersionFromChangelog();
 
 // --- 1. vendor the tlf library ---------------------------------------------
 if (skipVendor) {

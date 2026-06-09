@@ -1,0 +1,107 @@
+[
+  {
+    "version": "0.9.0",
+    "date": "2026-06-09",
+    "title": "Updates page + real version numbers",
+    "changes": [
+      { "area": "Studio", "text": "Added this Updates page — a running history of every change across both the app and the underlying TLF automation library." },
+      { "area": "Studio", "text": "The app version now increases with each release and is shown here and on the Settings page; the installer filename matches it too." },
+      { "area": "Studio", "text": "The \"Select TFLs\" assistant is now data-aware — ask it to \"select everything my data supports\" — and shows a working indicator plus a plain-English summary of exactly what it changed (or why nothing changed)." }
+    ]
+  },
+  {
+    "version": "0.8.0",
+    "date": "2026-06-09",
+    "title": "Settings, model picker & polish",
+    "changes": [
+      { "area": "Studio", "text": "In-app Settings: paste your Anthropic API key (saved locally and verified with a test call), see the app version, and check for updates — no more editing files." },
+      { "area": "Studio", "text": "Added an AI model dropdown so you can choose which Claude model the app uses; the options come live from your account." },
+      { "area": "Desktop", "text": "Removed the native menu bar (File / Edit / View / Window)." },
+      { "area": "Desktop", "text": "Friendlier startup-failure screen with \"Try again\" and \"Open logs\" buttons." },
+      { "area": "Desktop", "text": "One-command build (npm run build:app) that turns source changes into a fresh installer." }
+    ]
+  },
+  {
+    "version": "0.7.0",
+    "date": "2026-06-09",
+    "title": "Desktop app — installer + auto-update",
+    "changes": [
+      { "area": "Desktop", "text": "TLF Studio is now a downloadable Windows app — no Python, Node, or manual setup required." },
+      { "area": "Desktop", "text": "One-click installer with Desktop and Start-menu shortcuts; the Python engine and web UI are bundled inside." },
+      { "area": "Desktop", "text": "Automatic updates from GitHub Releases — installed apps update themselves in the background." }
+    ]
+  },
+  {
+    "version": "0.6.0",
+    "date": "2026-06-08",
+    "title": "Studio polish",
+    "changes": [
+      { "area": "Studio", "text": "The AI assistant now streams its answers word-by-word." },
+      { "area": "Studio", "text": "Unified the Protocol / CRF / SAP upload experience and persisted SAP extraction results." },
+      { "area": "Studio", "text": "Polished the study overview dashboard and the configuration page." }
+    ]
+  },
+  {
+    "version": "0.5.0",
+    "date": "2026-06-05",
+    "title": "Source documents & smarter AI",
+    "changes": [
+      { "area": "Studio", "text": "Upload Protocol and CRF documents; AI extracts study metadata and category lists for you to review and edit." },
+      { "area": "Studio", "text": "SAP upload now accepts PDF or Word (.docx) files." },
+      { "area": "Studio", "text": "Create a study by selecting a whole data folder instead of picking files one at a time." },
+      { "area": "Studio", "text": "The table-chat assistant can query the underlying ADaM data (e.g. list subject IDs), not just the rendered table." },
+      { "area": "Studio", "text": "Figures now preview as images, and \"Download RTF\" generates the file on demand." },
+      { "area": "Automation", "text": "Table generation now respects human-reviewed CRF category lists (disposition-reason order, race / ethnicity, etc.)." },
+      { "area": "Automation", "text": "Removed the slow RTF→PDF conversion step from generation." }
+    ]
+  },
+  {
+    "version": "0.4.2",
+    "date": "2026-06-04",
+    "title": "Real data & preview fixes",
+    "changes": [
+      { "area": "Automation", "text": "Restored the CDISCPILOT01 ADaM data and added the randomization-by-country table." },
+      { "area": "Studio", "text": "Fixed table-preview headers and generation wiring." }
+    ]
+  },
+  {
+    "version": "0.4.0",
+    "date": "2026-06-01",
+    "title": "Shell mode & per-output specs",
+    "changes": [
+      { "area": "Automation", "text": "Shell mode: generate empty CRO TFL shell templates (with \"xx\" placeholders) when no data is present." },
+      { "area": "Automation", "text": "Every table wired to match the CRO TFL template layout exactly." },
+      { "area": "Automation", "text": "Split the shell registry into one spec file per table / figure." },
+      { "area": "Studio", "text": "Support for the split shell registry and editing SAP configuration." }
+    ]
+  },
+  {
+    "version": "0.3.0",
+    "date": "2026-05-25",
+    "title": "Spec alignment & submission docs",
+    "changes": [
+      { "area": "Automation", "text": "Aligned all outputs with the General Outputs Specification and added abbreviation footnotes." },
+      { "area": "Automation", "text": "Made column layouts study-agnostic and added synthetic test datasets (ABC201, pharmaverse)." },
+      { "area": "Automation", "text": "Added ADRG, SDRG, and define.xml submission documents." },
+      { "area": "Automation", "text": "Audit fixes: demographics Sex/Race counts, headers and labels, AE coverage; auto-replace old dated outputs." }
+    ]
+  },
+  {
+    "version": "0.2.0",
+    "date": "2026-05-15",
+    "title": "Output formatting",
+    "changes": [
+      { "area": "Automation", "text": "RTF→PDF conversion via Word, with a timeout to recover from COM hangs." },
+      { "area": "Automation", "text": "Condensed continuous-summary blocks to five rows and kept them together across page breaks." }
+    ]
+  },
+  {
+    "version": "0.1.0",
+    "date": "2026-05-14",
+    "title": "Initial release",
+    "changes": [
+      { "area": "Automation", "text": "CDISCPILOT01 TLF automation library — generates tables, listings, and figures to RTF from ADaM data." },
+      { "area": "Studio", "text": "TLF Studio web app — configure, generate, preview, and manage clinical TLF outputs." }
+    ]
+  }
+]

@@ -2,12 +2,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutGrid, Settings } from "lucide-react";
+import { History, LayoutGrid, Settings } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
 const NAV = [
   { href: "/studies", label: "Studies", icon: LayoutGrid },
+  { href: "/updates", label: "Updates", icon: History },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
