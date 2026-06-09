@@ -13,6 +13,10 @@ node_modules/
 out/
 *.tsbuildinfo
 
+# ---- Electron packaging output (installer + unpacked app) ----
+desktop/dist-installer/
+backend/vendor/**/__pycache__/
+
 # ---- Testing / coverage ----
 .pytest_cache/
 .coverage

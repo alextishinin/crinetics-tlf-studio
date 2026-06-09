@@ -8,6 +8,7 @@
 // It's launch.bat, but hidden and bundled.
 
 const { app, BrowserWindow, shell } = require("electron");
+const { autoUpdater } = require("electron-updater");
 const path = require("path");
 const fs = require("fs");
 const http = require("http");
@@ -203,6 +204,27 @@ async function boot() {
   }
 
   if (mainWindow) mainWindow.loadURL(`http://${HOST}:${FRONTEND_PORT}/studies`);
+
+  checkForUpdates();
+}
+
+// --- auto-update -----------------------------------------------------------
+// Checks GitHub Releases (configured under build.publish). Downloads any new
+// version in the background and installs it on the next quit. Only runs in the
+// packaged app — a dev checkout has no update feed.
+function checkForUpdates() {
+  if (!app.isPackaged) return;
+  autoUpdater.autoDownload = true;
+  autoUpdater.on("error", (err) => console.error("[updater]", err?.message || err));
+  autoUpdater.on("update-available", (info) =>
+    console.log(`[updater] update available: ${info?.version}`)
+  );
+  autoUpdater.on("update-downloaded", (info) =>
+    console.log(`[updater] update ${info?.version} downloaded; will install on quit`)
+  );
+  autoUpdater.checkForUpdatesAndNotify().catch((err) =>
+    console.error("[updater] check failed:", err?.message || err)
+  );
 }
 
 // --- lifecycle -------------------------------------------------------------

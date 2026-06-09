@@ -3,13 +3,52 @@
   "version": "0.1.0",
   "private": true,
   "description": "TLF Studio desktop shell (Electron) — bundles the frozen backend and the Next.js UI.",
+  "author": "Crinetics Pharmaceuticals",
   "main": "main.js",
   "scripts": {
     "prestart": "node scripts/ensure-frontend.mjs",
     "start": "electron .",
-    "build:frontend": "node scripts/assemble-frontend.mjs"
+    "build:frontend": "node scripts/assemble-frontend.mjs",
+    "predist": "node scripts/ensure-frontend.mjs",
+    "dist": "electron-builder --publish never",
+    "prerelease": "node scripts/ensure-frontend.mjs",
+    "release": "electron-builder --publish always"
   },
   "devDependencies": {
-    "electron": "^42.3.3"
+    "electron": "^42.3.3",
+    "electron-builder": "^26.15.2"
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.9"
+  },
+  "build": {
+    "appId": "com.crinetics.tlfstudio",
+    "productName": "TLF Studio",
+    "directories": {
+      "output": "dist-installer",
+      "buildResources": "build"
+    },
+    "extraResources": [
+      { "from": "../backend/dist/backend", "to": "backend" },
+      { "from": "../frontend/.next/standalone", "to": "frontend" }
+    ],
+    "win": {
+      "target": ["nsis"],
+      "artifactName": "TLF-Studio-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "TLF Studio"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "alextishinin",
+        "repo": "crinetics-tlf-studio"
+      }
+    ]
   }
 }
