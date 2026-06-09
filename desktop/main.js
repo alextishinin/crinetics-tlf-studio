@@ -7,8 +7,12 @@
 // both to answer, then opens the app window. Kills the sidecars on quit.
 // It's launch.bat, but hidden and bundled.
 
-const { app, BrowserWindow, shell, ipcMain } = require("electron");
+const { app, BrowserWindow, shell, ipcMain, Menu } = require("electron");
 const { autoUpdater } = require("electron-updater");
+
+// No native menu bar (File / Edit / View / Window) — this is a single-purpose
+// app and doesn't need it.
+Menu.setApplicationMenu(null);
 const path = require("path");
 const fs = require("fs");
 const http = require("http");
