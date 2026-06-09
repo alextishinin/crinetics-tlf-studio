@@ -26,6 +26,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 _ENV_FILE = Path(__file__).parent / ".env"
 
 APP_DIR_NAME = "TLF Studio"
+APP_VERSION = "0.1.0"
 
 
 def is_frozen() -> bool:
@@ -157,3 +158,23 @@ def _read_env_key(env_path: Path, name: str) -> str:
             continue
         return line.split("=", 1)[1].strip()
     return ""
+
+
+def set_api_key(key: str) -> None:
+    """Persist the Anthropic API key to the per-user config and apply it live.
+
+    Writes ``%APPDATA%\\TLF Studio\\config.json`` (where the installed app reads
+    the key) and updates the cached Settings so the running backend uses the
+    new key immediately — no restart needed.
+    """
+    key = (key or "").strip()
+    cfg_path = appdata_dir() / "config.json"
+    data: dict = {}
+    if cfg_path.exists():
+        try:
+            data = json.loads(cfg_path.read_text(encoding="utf-8"))
+        except Exception:
+            data = {}
+    data["anthropic_api_key"] = key
+    cfg_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    get_settings().anthropic_api_key = key

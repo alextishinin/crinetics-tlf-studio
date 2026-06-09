@@ -50,6 +50,7 @@ hiddenimports += [
     "routers.jobs",
     "routers.outputs",
     "routers.preview",
+    "routers.settings",
     "routers.shells",
     "routers.studies",
 ]

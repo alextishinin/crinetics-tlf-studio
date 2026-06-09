@@ -7,7 +7,7 @@
 // both to answer, then opens the app window. Kills the sidecars on quit.
 // It's launch.bat, but hidden and bundled.
 
-const { app, BrowserWindow, shell } = require("electron");
+const { app, BrowserWindow, shell, ipcMain } = require("electron");
 const { autoUpdater } = require("electron-updater");
 const path = require("path");
 const fs = require("fs");
@@ -175,7 +175,24 @@ function showStatus(message, isError) {
 // --- boot sequence ---------------------------------------------------------
 async function boot() {
   createWindow();
+  await startServices();
+}
+
+// Spawn the sidecars, wait for them, then load the app — or show a friendly
+// error. Safe to call again (Retry): it cleans up any previous attempt first.
+async function startServices() {
   showStatus("Starting TLF Studio…", false);
+
+  for (const proc of [backendProc, frontendProc]) {
+    try {
+      if (proc && !proc.killed) proc.kill();
+    } catch (_) {
+      /* ignore */
+    }
+  }
+  backendProc = null;
+  frontendProc = null;
+  shuttingDown = false;
 
   let paths;
   try {
@@ -190,21 +207,17 @@ async function boot() {
   showStatus("Starting services…", false);
   const backendOk = await waitForUrl(`http://${HOST}:${BACKEND_PORT}/health`, STARTUP_TIMEOUT_MS);
   if (!backendOk) {
-    showStatus(
-      "The backend did not start. Check the logs in:\n" + logDir(),
-      true
-    );
+    showStatus("The data engine didn't start. Try again, or open the logs for details.", true);
     return;
   }
 
   const frontendOk = await waitForUrl(`http://${HOST}:${FRONTEND_PORT}/studies`, STARTUP_TIMEOUT_MS);
   if (!frontendOk) {
-    showStatus("The interface did not start. Check the logs in:\n" + logDir(), true);
+    showStatus("The interface didn't start. Try again, or open the logs for details.", true);
     return;
   }
 
   if (mainWindow) mainWindow.loadURL(`http://${HOST}:${FRONTEND_PORT}/studies`);
-
   checkForUpdates();
 }
 
@@ -212,8 +225,11 @@ async function boot() {
 // Checks GitHub Releases (configured under build.publish). Downloads any new
 // version in the background and installs it on the next quit. Only runs in the
 // packaged app — a dev checkout has no update feed.
-function checkForUpdates() {
-  if (!app.isPackaged) return;
+let updaterWired = false;
+
+function wireUpdater() {
+  if (updaterWired) return;
+  updaterWired = true;
   autoUpdater.autoDownload = true;
   autoUpdater.on("error", (err) => console.error("[updater]", err?.message || err));
   autoUpdater.on("update-available", (info) =>
@@ -222,9 +238,37 @@ function checkForUpdates() {
   autoUpdater.on("update-downloaded", (info) =>
     console.log(`[updater] update ${info?.version} downloaded; will install on quit`)
   );
+}
+
+function checkForUpdates() {
+  if (!app.isPackaged) return;
+  wireUpdater();
   autoUpdater.checkForUpdatesAndNotify().catch((err) =>
     console.error("[updater] check failed:", err?.message || err)
   );
+}
+
+// Invoked by the in-app Settings "Check for updates" button (via IPC).
+async function checkForUpdatesManual() {
+  const current = app.getVersion();
+  if (!app.isPackaged) {
+    return { status: "dev", message: "Updates only apply to the installed app." };
+  }
+  wireUpdater();
+  try {
+    const result = await autoUpdater.checkForUpdates();
+    const latest = result && result.updateInfo && result.updateInfo.version;
+    if (latest && latest !== current) {
+      return {
+        status: "available",
+        version: latest,
+        message: `Update ${latest} found — downloading; it installs when you next quit.`,
+      };
+    }
+    return { status: "current", message: `You're up to date (v${current}).` };
+  } catch (err) {
+    return { status: "error", message: `Couldn't check for updates: ${err?.message || err}` };
+  }
 }
 
 // --- lifecycle -------------------------------------------------------------
@@ -251,6 +295,12 @@ if (!gotLock) {
       mainWindow.focus();
     }
   });
+
+  // IPC for the preload bridge (renderer ↔ main).
+  ipcMain.handle("app:getVersion", () => app.getVersion());
+  ipcMain.handle("app:checkForUpdates", () => checkForUpdatesManual());
+  ipcMain.handle("app:retry", () => startServices());
+  ipcMain.handle("app:openLogs", () => shell.openPath(logDir()));
 
   app.whenReady().then(boot);
 

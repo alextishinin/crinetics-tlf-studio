@@ -11,8 +11,8 @@ from __future__ import annotations
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from config import get_settings
-from routers import ai, jobs, outputs, preview, shells, studies
+from config import APP_VERSION, get_settings
+from routers import ai, jobs, outputs, preview, settings as settings_router, shells, studies
 
 
 def create_app() -> FastAPI:
@@ -20,7 +20,7 @@ def create_app() -> FastAPI:
 
     app = FastAPI(
         title="TLF Studio API",
-        version="0.1.0",
+        version=APP_VERSION,
         description="Internal API for Crinetics TLF Studio.",
     )
     app.add_middleware(
@@ -37,6 +37,7 @@ def create_app() -> FastAPI:
     app.include_router(preview.router)
     app.include_router(outputs.router)
     app.include_router(ai.router)
+    app.include_router(settings_router.router)
 
     @app.get("/health")
     def health() -> dict[str, str]:

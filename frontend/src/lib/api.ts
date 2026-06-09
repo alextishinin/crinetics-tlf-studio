@@ -23,6 +23,7 @@ import type {
   ProtocolExtractionResponse,
   SapExtractionResponse,
 } from "@/types/ai";
+import type { ApiKeySaveResult, SettingsInfo } from "@/types/settings";
 
 export class ApiError extends Error {
   status: number;
@@ -125,6 +126,16 @@ export const preview = {
     }),
   rtfUrl: (studyId: string, tableId: string) =>
     `${API_BASE_URL}/api/studies/${studyId}/preview/${tableId}/rtf`,
+};
+
+// ---- settings ----
+export const settings = {
+  get: () => http<SettingsInfo>("/api/settings"),
+  setApiKey: (apiKey: string) =>
+    http<ApiKeySaveResult>("/api/settings/api-key", {
+      method: "POST",
+      body: JSON.stringify({ api_key: apiKey }),
+    }),
 };
 
 // ---- outputs ----

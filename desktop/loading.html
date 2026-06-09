@@ -34,6 +34,20 @@
       .error .spinner { display: none; }
       .error .brand { color: #b91c1c; }
       .badge { font-size: 11px; color: #94a3b8; }
+      .actions { display: none; gap: 10px; margin-top: 4px; }
+      .error .actions { display: flex; }
+      button {
+        font: inherit;
+        font-size: 13px;
+        padding: 7px 14px;
+        border-radius: 6px;
+        border: 1px solid #cbd5e1;
+        background: #fff;
+        color: #0f172a;
+        cursor: pointer;
+      }
+      button.primary { background: #0d9488; border-color: #0d9488; color: #fff; }
+      button:hover { filter: brightness(0.97); }
       @keyframes spin { to { transform: rotate(360deg); } }
     </style>
   </head>
@@ -42,6 +56,10 @@
       <div class="spinner" id="spinner"></div>
       <div class="brand" id="brand">TLF Studio</div>
       <div class="sub" id="sub">Starting…</div>
+      <div class="actions" id="actions">
+        <button class="primary" id="retry">Try again</button>
+        <button id="logs">Open logs</button>
+      </div>
       <div class="badge">Crinetics Pharmaceuticals · Internal</div>
     </div>
     <script>
@@ -53,6 +71,15 @@
         document.getElementById("wrap").classList.add("error");
         document.getElementById("brand").textContent = "TLF Studio couldn’t start";
       }
+      const api = window.tlfStudio;
+      document.getElementById("retry").addEventListener("click", () => {
+        document.getElementById("sub").textContent = "Trying again…";
+        document.getElementById("wrap").classList.remove("error");
+        api && api.retry && api.retry();
+      });
+      document.getElementById("logs").addEventListener("click", () => {
+        api && api.openLogs && api.openLogs();
+      });
     </script>
   </body>
 </html>
