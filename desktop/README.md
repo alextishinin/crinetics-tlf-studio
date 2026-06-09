@@ -123,6 +123,11 @@ need no token.
   cert later via electron-builder's `win.certificateFile` / `CSC_LINK`.
 - **Default icon.** No app icon yet — drop a 256×256+ `build/icon.ico` (or
   `.png`) in `desktop/` and rebuild to brand it.
-- **API key.** The installed app reads the Anthropic key from
-  `%APPDATA%\TLF Studio\config.json` (`{"anthropic_api_key": "..."}`). A
-  first-run screen to set this is Phase 4.
+- **API key.** Set it in-app under **Settings** — paste the key and it's
+  saved to `%APPDATA%\TLF Studio\config.json`, applied live, and verified with
+  a test request. A first-run banner on the Studies page prompts for it when
+  it's missing. (Editing that JSON by hand still works as a fallback.)
+- **Updates / version.** Settings shows the app version and a "Check for
+  updates" button; updates otherwise install automatically on quit.
+- **Startup failures** show a friendly screen with **Try again** + **Open
+  logs** instead of a blank window.
