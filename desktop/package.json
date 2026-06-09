@@ -24,6 +24,7 @@
   "build": {
     "appId": "com.crinetics.tlfstudio",
     "productName": "TLF Studio",
+    "afterPack": "afterPack.js",
     "directories": {
       "output": "dist-installer",
       "buildResources": "build"
