@@ -100,9 +100,10 @@ export default function ShellsPage() {
   }
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex min-h-full flex-col">
       <Header
         title="Select TFLs"
+        sticky
         action={
           <Button onClick={handleSave} disabled={save.isPending}>
             <Save className="h-4 w-4" /> Save selection
@@ -188,7 +189,7 @@ export default function ShellsPage() {
         </div>
 
         <div>
-          <Card className="sticky top-4">
+          <Card className="sticky top-20">
             <CardHeader><CardTitle className="text-base">Selection summary</CardTitle></CardHeader>
             <CardContent className="space-y-1 text-sm">
               <div className="flex justify-between border-b pb-1 font-medium">

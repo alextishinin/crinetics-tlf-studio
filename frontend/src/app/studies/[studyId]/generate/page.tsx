@@ -53,9 +53,10 @@ export default function GeneratePage() {
   const progress = total === 0 ? 0 : Math.round((complete / total) * 100);
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex min-h-full flex-col">
       <Header
         title="Generate"
+        sticky
         action={
           <Button onClick={handleGenerate} disabled={submit.isPending}>
             <PlayCircle className="h-4 w-4" /> Generate Selected
