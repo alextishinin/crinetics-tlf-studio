@@ -73,22 +73,33 @@ auto-updates from the public GitHub Releases of
 
 ### Build the installer
 
-Prerequisites — these must be freshly built first (electron-builder bundles
-them as-is):
+**One command** (from `desktop/`) — turns the current source into a fresh
+installer. It re-vendors the tlf library, freezes the backend, builds the
+frontend, and packages the installer:
 
 ```cmd
-:: Freeze the backend  (see ../backend/BUILD.md)
-cd ..\backend && .venv\Scripts\pyinstaller.exe backend.spec --noconfirm
+npm run build:app
+```
 
-:: Build the frontend standalone
+Flags: `--skip-vendor` (use the committed `backend/vendor` instead of the
+sibling repo). Re-run this whenever you change the **tlf library**, the
+**backend**, the **frontend**, or the **Electron shell** — it rebuilds only
+what's needed downstream and always repackages.
+
+<details>
+<summary>…or run the steps manually</summary>
+
+```cmd
+:: re-vendor the tlf library (only if you changed crinetics-tlf-automation)
+cd ..\ && backend\.venv\Scripts\python.exe scripts\vendor_tlf.py
+:: freeze the backend (only if you changed the backend / re-vendored)
+cd backend && .venv\Scripts\pyinstaller.exe backend.spec --noconfirm
+:: build the frontend (only if you changed it)
 cd ..\frontend && npm run build
+:: package
+cd ..\desktop && npm run dist
 ```
-
-Then, from `desktop/`:
-
-```cmd
-npm run dist
-```
+</details>
 
 Output → `desktop/dist-installer/`:
 
@@ -104,11 +115,19 @@ Start-menu shortcuts.
 
 ### Publish a release (enables auto-update)
 
+**One command** — bumps the patch version, syncs `backend/config.py`
+`APP_VERSION`, builds everything, and uploads to a GitHub Release:
+
 ```cmd
-:: needs a GitHub token with repo scope, e.g. from `gh auth token`
-set GH_TOKEN=<token>
-npm version patch        :: or minor/major — bumps desktop/package.json
-npm run release          :: builds + uploads installer + latest.yml to a GitHub Release
+set GH_TOKEN=<token>     :: a GitHub token with repo scope, e.g. `gh auth token`
+npm run release:app
+```
+
+For a minor/major bump, set the version first then skip the auto-bump:
+
+```cmd
+npm version minor --no-git-tag-version
+node scripts/build-app.mjs --release --no-bump
 ```
 
 On launch, the installed app checks the latest GitHub Release, downloads a

@@ -9,6 +9,8 @@
     "prestart": "node scripts/ensure-frontend.mjs",
     "start": "electron .",
     "build:frontend": "node scripts/assemble-frontend.mjs",
+    "build:app": "node scripts/build-app.mjs",
+    "release:app": "node scripts/build-app.mjs --release",
     "predist": "node scripts/ensure-frontend.mjs",
     "dist": "electron-builder --publish never",
     "prerelease": "node scripts/ensure-frontend.mjs",
