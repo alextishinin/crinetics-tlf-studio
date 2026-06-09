@@ -1,0 +1,67 @@
+id: t_14_1_1_1
+type: table
+title_line1: Table 14.1.1.1
+title_line2: Subject Disposition
+title_line3: All Subjects
+adam_domains:
+- adsl
+analysis_set: ALL
+column_layout: safety_with_total
+row_schema:
+- label: Randomized Population [1]
+  kind: count_only
+  source: adsl_randomized
+  level: 0
+- label: Intent-To-Treat Set
+  kind: n_pct
+  denom: randomized
+  source: ittfl_y
+  level: 0
+- label: Safety Analysis Set
+  kind: n_pct
+  denom: randomized
+  source: saffl_y
+  level: 0
+- label: Completed Study Treatment
+  kind: n_pct
+  denom: randomized
+  source: comp24fl_y
+  level: 0
+- label: Early Discontinuation from Study Treatment
+  kind: n_pct
+  denom: randomized
+  source: disconfl_y
+  level: 0
+- label: '{dcdecod}'
+  kind: n_pct_dynamic
+  denom: randomized
+  source: dcdecod
+  level: 1
+- label: Completed Study
+  kind: n_pct
+  denom: randomized
+  source: comp24fl_y
+  level: 0
+- label: Early Discontinuation from Study
+  kind: n_pct
+  denom: randomized
+  source: disconfl_y
+  level: 0
+optional_rows:
+- label: Screened
+  condition: screen_failure_collected
+  default: false
+- label: Entered Run-in
+  condition: run_in_phase
+  default: false
+- label: Participated in OLE
+  condition: ole_present
+  default: false
+footnotes:
+- '[1] Used as denominator for the subcategories.'
+conditionality: required
+programming_notes:
+- For non-randomized study, the percentages are calculated based on the safety population.
+- Only keep the subject populations defined in the study and SAP.
+- Reason for early discontinuation includes all categories in the corresponding CRF,
+  with the same order as CRF entries.

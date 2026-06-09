@@ -1,0 +1,11 @@
+id: generic_subgroup
+type: generic_layout
+title_line1: Table 14.X
+title_line2: Summary of {{ endpoint }} by {{ subgroup_var }}
+title_line3: '{{ analysis_set_label }}'
+adam_domains: []
+analysis_set: EFF
+column_layout: efficacy_no_total
+new_page_per_subgroup_level: true
+footnotes:
+- New level of subgroup starts on a new page; column N reflects subgroup counts.

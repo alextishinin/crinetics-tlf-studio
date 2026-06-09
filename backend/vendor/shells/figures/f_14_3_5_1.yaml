@@ -1,0 +1,19 @@
+id: f_14_3_5_1
+type: figure
+title_line1: Figure 14.3.5.1
+title_line2: Mean Blood Pressure Value Over Time
+title_line3: Safety Analysis Set
+adam_domains:
+- advs
+- adsl
+analysis_set: SAF
+figure_kind: mean_over_time
+figure_params:
+  params:
+  - Systolic Blood Pressure (mmHg)
+  - Diastolic Blood Pressure (mmHg)
+  time_var: AVISITN
+footnotes:
+- Baseline is defined as {{ baseline_definition }}
+conditionality: optional
+optional_flag: figure_14_3_5_1_bp_over_time

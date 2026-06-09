@@ -1,0 +1,30 @@
+id: t_14_3_1_11_aesi
+type: table
+title_line1: Table 14.3.1.11
+title_line2: Summary of Treatment-Emergent Adverse Events of Special Interest by Category
+  and Preferred Term
+title_line3: Safety Analysis Set
+adam_domains:
+- adae
+analysis_set: SAF
+column_layout: safety_with_total
+show_occurrences: true
+base_filter:
+  TRTEMFL: Y
+  CQ01NAM_not_null: true
+row_schema:
+- label: '{cq01nam}'
+  kind: n_pct_m
+  level: 0
+  group_by: CQ01NAM
+- label: '{pt}'
+  kind: n_pct_m
+  level: 1
+  group_by: AEDECOD
+sort: Total descending by AESI category, then PT within category
+footnotes:
+- teae = treatment-emergent adverse event, aesi = adverse event of special interest.
+- MedDRA Version {{ meddra_version }}.
+- 'AESI for this study: Dermatologic Events (CQ01NAM=''DERMATOLOGIC EVENTS'').'
+conditionality: optional
+optional_flag: table_14_3_1_11_aesi

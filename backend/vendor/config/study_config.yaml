@@ -1,0 +1,142 @@
+# Study configuration — CDISCPILOT01 (reference build).
+# Anything in this file is study-specific and is the only thing that should
+# change between studies. Source code remains unchanged.
+
+study_id: CDISCPILOT01
+protocol_number: CDISCPILOT01
+protocol_title: "A Phase X Study of Xanomeline in Subjects with Alzheimer's Disease"
+indication: "Alzheimer's Disease"
+
+# Run-time stamps (override at generate time)
+data_extract_date: ""     # YYYY-MM-DD; fill at runtime
+data_cut_date: ""         # optional; leave blank to omit from footer
+run_datetime: ""          # DDMMMYYYY:HH:MM:SS; fill at runtime
+
+# Tooling versions printed in footnotes / footer
+sas_version: "9.4"
+meddra_version: "25.0"
+who_drug_version: ""      # not applicable for this study
+
+# ---------------------------------------------------------------------------
+# Treatment arms (column order is the order in this list)
+# ---------------------------------------------------------------------------
+treatment_arms:
+  - label: "Xanomeline Low Dose"
+    trtpn: 54
+    column_header: "Xanomeline\nLow Dose"
+    target_daily_dose_mg: 54   # used for compliance computation
+  - label: "Xanomeline High Dose"
+    trtpn: 81
+    column_header: "Xanomeline\nHigh Dose"
+    target_daily_dose_mg: 81
+  - label: "Placebo"
+    trtpn: 0
+    column_header: "Placebo"
+    target_daily_dose_mg: null
+
+pooled_active: false           # no pooled active arm in this study
+include_total_column: true     # safety tables include Total; efficacy do not
+
+# ---------------------------------------------------------------------------
+# Analysis sets
+# ---------------------------------------------------------------------------
+analysis_sets:
+  SAF:
+    label: "Safety Analysis Set"
+    flag_var: SAFFL
+    flag_val: "Y"
+    n: {54: 84, 81: 84, 0: 86}
+  ITT:
+    label: "Intent-To-Treat Set"
+    flag_var: ITTFL
+    flag_val: "Y"
+    n: {54: 84, 81: 84, 0: 86}
+  EFF:
+    label: "Efficacy Population"
+    flag_var: EFFFL
+    flag_val: "Y"
+    n: {54: null, 81: null, 0: null}   # computed at runtime
+  ALL:
+    label: "All Subjects"
+    flag_var: null
+    flag_val: null
+    n: {54: null, 81: null, 0: null}
+
+# ---------------------------------------------------------------------------
+# Paths
+# ---------------------------------------------------------------------------
+adam_path: "data/"
+output_path: "outputs/"
+shell_registry: "shells/registry.yaml"
+
+# ---------------------------------------------------------------------------
+# SAP-driven definitions (interpolated into footnotes via Jinja2)
+# ---------------------------------------------------------------------------
+sap_definitions:
+  teae_definition: >-
+    An AE is considered treatment-emergent if it started on or after the first
+    dose of study treatment (TRTEMFL='Y').
+  baseline_definition: >-
+    Baseline is defined as the last non-missing assessment on or before the
+    date of first study treatment.
+  related_ae_definition: >-
+    A related AE is defined as one with AEREL of POSSIBLE or PROBABLE. Missing
+    relationship is imputed as POSSIBLE.
+  exposure_duration_definition: >-
+    Duration of exposure is defined as TRTEDT - TRTSDT + 1 (days).
+  prior_medication_definition: >-
+    A prior medication is defined as a medication started before first dose of
+    study treatment.
+  concomitant_medication_definition: >-
+    A concomitant medication is defined as a medication taken concurrently
+    with study treatment.
+
+# ---------------------------------------------------------------------------
+# Configurable exposure-duration bins for Table 14.1.3.1
+# (Edit these for each study per SAP.)
+# ---------------------------------------------------------------------------
+exposure_duration_bins:
+  - {label: "< 30 days",  lo: null, hi: 30,  inclusive_hi: false}
+  - {label: "30-60 days", lo: 30,   hi: 60,  inclusive_lo: true, inclusive_hi: true}
+  - {label: "61-90 days", lo: 60,   hi: 90,  inclusive_lo: false, inclusive_hi: true}
+  - {label: "> 90 days",  lo: 90,   hi: null, inclusive_lo: false}
+
+# Common-AE frequency cutoff (Table 14.3.1.11)
+common_ae_cutoff_pct: 5.0
+
+# ---------------------------------------------------------------------------
+# Optional outputs — toggle per study
+# ---------------------------------------------------------------------------
+optional_outputs:
+  table_14_1_1_2_randomization_by_country: true
+  table_14_1_1_3_analysis_sets: false
+  table_14_1_1_4_protocol_deviations: true
+  table_14_1_2_2_medical_history: true
+  table_14_1_2_3_prior_medication: false
+  table_14_1_2_4_concomitant_medication: true
+  table_14_1_3_2_compliance: true
+  table_14_3_1_3_grade3_aes: false
+  table_14_3_1_4_grade3_related_aes: false
+  table_14_3_1_9_ae_by_pt: true
+  table_14_3_1_10_related_ae_by_pt: true
+  table_14_3_1_11_common_aes: true
+  table_14_3_1_11_aesi: true
+  table_14_3_1_12_related_aesi: true
+  table_14_3_1_13_ae_by_severity: true
+  table_14_3_1_14_ae_by_causality: true
+  table_14_3_4_5_chemistry_specific_levels: true
+  table_14_3_4_6_hematology_specific_levels: true
+  table_14_3_5_2_bp_specific_levels: true
+  table_14_3_6_2_qtcf_criteria: false
+  figure_14_1_1_1_time_to_disc: true
+  figure_14_3_1_1_ae_by_soc: true
+  figure_14_3_4_1_chemistry_cfb: true
+  figure_14_3_4_2_hematology_cfb: true
+  figure_14_3_4_3_dili_hys_law: true
+  figure_14_3_5_1_bp_over_time: true
+  figure_14_3_5_2_bp_baseline_vs_max: true
+
+# ---------------------------------------------------------------------------
+# Source path printed in footer
+# ---------------------------------------------------------------------------
+source_code_location: "src/tlf/"

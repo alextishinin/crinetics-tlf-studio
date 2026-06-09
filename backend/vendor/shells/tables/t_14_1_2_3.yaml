@@ -1,0 +1,30 @@
+id: t_14_1_2_3
+type: table
+title_line1: Table 14.1.2.3
+title_line2: Prior Medication
+title_line3: Safety Analysis Set
+adam_domains: []
+analysis_set: SAF
+column_layout: safety_with_total
+row_schema:
+- label: Subjects with at Least One Prior Medication
+  kind: n_pct
+  level: 0
+- label: '{atc2}'
+  kind: n_pct
+  level: 0
+- label: '{atc4}'
+  kind: n_pct
+  level: 1
+footnotes:
+- atc = anatomical therapeutic chemical.
+- WHO Drug dictionary version {{ who_drug_version }}.
+- Prior medication is defined as {{ prior_medication_definition }}.
+- Subjects taking multiple medications within the same ATC Level 2 or Level 4 are
+  only counted once within the respective category.
+conditionality: optional
+optional_flag: table_14_1_2_3_prior_medication
+programming_notes:
+- Optional. May not be needed for studies with healthy volunteer.
+- Sort by descending frequency of ATC Level 2 and ATC Level 4 in Total column, then
+  High → Low → Placebo.

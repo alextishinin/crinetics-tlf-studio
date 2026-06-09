@@ -1,0 +1,104 @@
+id: t_14_3_5_2
+type: table
+title_line1: Table 14.3.5.2
+title_line2: Summary of Subject with Post-Baseline Blood Pressure Meeting Specific
+  Level
+title_line3: Safety Analysis Set
+adam_domains:
+- advs
+- adsl
+analysis_set: SAF
+column_layout: safety_with_total
+row_schema:
+- label: Maximum Systolic Blood Pressure (SBP)(mmHg)
+  kind: header
+  level: 0
+- label: <90
+  kind: bp_threshold
+  paramcd: SYSBP
+  op: <
+  value: 90
+  level: 1
+- label: '>=90'
+  kind: bp_threshold
+  paramcd: SYSBP
+  op: '>='
+  value: 90
+  level: 1
+- label: '>=120'
+  kind: bp_threshold
+  paramcd: SYSBP
+  op: '>='
+  value: 120
+  level: 1
+- label: '>=140'
+  kind: bp_threshold
+  paramcd: SYSBP
+  op: '>='
+  value: 140
+  level: 1
+- label: '>=160'
+  kind: bp_threshold
+  paramcd: SYSBP
+  op: '>='
+  value: 160
+  level: 1
+- label: '>=180'
+  kind: bp_threshold
+  paramcd: SYSBP
+  op: '>='
+  value: 180
+  level: 1
+- label: Maximum Diastolic Blood Pressure (DBP)(mmHg)
+  kind: header
+  level: 0
+- label: <60
+  kind: bp_threshold
+  paramcd: DIABP
+  op: <
+  value: 60
+  level: 1
+- label: '>=60'
+  kind: bp_threshold
+  paramcd: DIABP
+  op: '>='
+  value: 60
+  level: 1
+- label: '>=90'
+  kind: bp_threshold
+  paramcd: DIABP
+  op: '>='
+  value: 90
+  level: 1
+- label: '>=110'
+  kind: bp_threshold
+  paramcd: DIABP
+  op: '>='
+  value: 110
+  level: 1
+- label: '>=120'
+  kind: bp_threshold
+  paramcd: DIABP
+  op: '>='
+  value: 120
+  level: 1
+- label: Hypotension Levels
+  kind: header
+  level: 0
+- label: Any SBP <90
+  kind: bp_threshold
+  paramcd: SYSBP
+  op: <
+  value: 90
+  level: 0
+- label: Any DBP <60
+  kind: bp_threshold
+  paramcd: DIABP
+  op: <
+  value: 60
+  level: 0
+footnotes:
+- sbp = systolic blood pressure, dbp = diastolic blood pressure.
+- 'Per FDA ''Standard safety tables and figures: integrated guide'' (Aug 2022).'
+conditionality: optional
+optional_flag: table_14_3_5_2_bp_specific_levels

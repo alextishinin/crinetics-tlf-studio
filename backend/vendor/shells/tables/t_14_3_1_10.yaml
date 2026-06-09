@@ -1,0 +1,28 @@
+id: t_14_3_1_10
+type: table
+title_line1: Table 14.3.1.10
+title_line2: Summary of Related Treatment-Emergent Adverse Events by Preferred Term
+title_line3: Safety Analysis Set
+adam_domains:
+- adae
+analysis_set: SAF
+column_layout: safety_with_total
+show_occurrences: true
+base_filter:
+  TRTEMFL: Y
+  related: true
+row_schema:
+- label: Subjects with at Least One Related TEAE
+  kind: n_pct_m
+  level: 0
+- label: '{pt}'
+  kind: n_pct_m
+  level: 0
+  group_by: AEDECOD
+sort: Total descending by PT
+footnotes:
+- teae = treatment-emergent adverse event, pt = preferred term.
+- MedDRA Version {{ meddra_version }}.
+- A related AE is defined as {{ related_ae_definition }}
+conditionality: optional
+optional_flag: table_14_3_1_10_related_ae_by_pt

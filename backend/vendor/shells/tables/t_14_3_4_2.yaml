@@ -1,0 +1,23 @@
+id: t_14_3_4_2
+type: table
+title_line1: Table 14.3.4.2
+title_line2: Summary of Hematology
+title_line3: Safety Analysis Set
+adam_domains:
+- adlbh
+- adsl
+analysis_set: SAF
+column_layout: safety_with_total
+row_schema:
+- label: '{param}'
+  kind: lab_continuous
+  level: 0
+  group_by: PARAM
+- label: '{avisit}'
+  kind: visit_block
+  level: 1
+  group_by: AVISIT
+sort: Parameter alphabetical
+footnotes:
+- Baseline is defined as {{ baseline_definition }}
+conditionality: required

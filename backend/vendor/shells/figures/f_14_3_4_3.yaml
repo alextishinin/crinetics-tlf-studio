@@ -1,0 +1,25 @@
+id: f_14_3_4_3
+type: figure
+title_line1: Figure 14.3.4.3
+title_line2: Hepatocellular Drug-Induced Liver Injury Screening Plot
+title_line3: Safety Analysis Set
+adam_domains:
+- adlbhy
+- adsl
+analysis_set: SAF
+figure_kind: hys_law_scatter
+figure_params:
+  x_paramcd:
+  - ALT
+  - AST
+  y_paramcd: BILI
+  hyslaw_flag_paramcd: HYLAW
+  x_ref: 3.0
+  y_ref: 2.0
+footnotes:
+- Each data point represents a patient plotted by their maximum ALT or AST versus
+  their maximum total bilirubin in the postbaseline period. Potential Hy's Law cases
+  (red circle) defined as any postbaseline total bilirubin >= 2 x ULN within 30 days
+  after a postbaseline ALT/AST >= 3 x ULN, ALP < 2 x ULN.
+conditionality: optional
+optional_flag: figure_14_3_4_3_dili_hys_law

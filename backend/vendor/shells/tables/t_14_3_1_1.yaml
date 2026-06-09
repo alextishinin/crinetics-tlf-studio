@@ -1,0 +1,147 @@
+id: t_14_3_1_1
+type: table
+title_line1: Table 14.3.1.1
+title_line2: Overview of Treatment-Emergent Adverse Events
+title_line3: Safety Analysis Set
+adam_domains:
+- adae
+- adsl
+analysis_set: SAF
+column_layout: safety_with_total
+show_occurrences: true
+row_schema:
+- label: Any Treatment-Emergent Adverse Event (TEAE)
+  kind: n_pct_m
+  filter:
+    TRTEMFL: Y
+- label: Any Related TEAE
+  kind: n_pct_m
+  filter:
+    TRTEMFL: Y
+    related: true
+- label: Any Severe TEAE
+  kind: n_pct_m
+  filter:
+    TRTEMFL: Y
+    AESEV: SEVERE
+- label: Any Grade >= 3 TEAE
+  kind: n_pct_m
+  filter:
+    TRTEMFL: Y
+    AETOXGR_gte: 3
+- label: Any Grade >= 3 Related TEAE
+  kind: n_pct_m
+  filter:
+    TRTEMFL: Y
+    AETOXGR_gte: 3
+    related: true
+- label: Any Serious TEAE
+  kind: n_pct_m
+  filter:
+    TRTEMFL: Y
+    AESER: Y
+- label: '      Result in Death'
+  kind: n_pct_m
+  filter:
+    TRTEMFL: Y
+    AESDTH: Y
+  level: 2
+- label: '      Life-threatening'
+  kind: n_pct_m
+  filter:
+    TRTEMFL: Y
+    AESLIFE: Y
+  level: 2
+- label: '      Hospitalization'
+  kind: n_pct_m
+  filter:
+    TRTEMFL: Y
+    AESHOSP: Y
+  level: 2
+- label: '      Congenital Anomaly or Birth Defect'
+  kind: n_pct_m
+  filter:
+    TRTEMFL: Y
+    AESCONG: Y
+  level: 2
+- label: '      Significant Disability'
+  kind: n_pct_m
+  filter:
+    TRTEMFL: Y
+    AESDISAB: Y
+  level: 2
+- label: '      Other Medically Important Event'
+  kind: n_pct_m
+  filter:
+    TRTEMFL: Y
+    AESOD: Y
+  level: 2
+- label: Any Serious Related TEAE
+  kind: n_pct_m
+  filter:
+    TRTEMFL: Y
+    AESER: Y
+    related: true
+- label: Any TEAE Leading to Discontinuation of Study Drug
+  kind: n_pct_m
+  filter:
+    TRTEMFL: Y
+    AEACN: DRUG WITHDRAWN
+- label: Any TEAE Leading to Dose Modification of Study Drug
+  kind: n_pct_m
+  filter:
+    TRTEMFL: Y
+    AEACN_dose_mod: true
+- label: '      Interruption'
+  kind: n_pct_m
+  filter:
+    TRTEMFL: Y
+    AEACN: DOSE INTERRUPTED
+  level: 2
+- label: '      Dose Reduction'
+  kind: n_pct_m
+  filter:
+    TRTEMFL: Y
+    AEACN: DOSE REDUCED
+  level: 2
+- label: '      Dose Delay'
+  kind: n_pct_m
+  filter:
+    TRTEMFL: Y
+    AEACN: DOSE DELAYED
+  level: 2
+- label: '      Other'
+  kind: n_pct_m
+  filter:
+    TRTEMFL: Y
+    AEACN_dose_mod_other: true
+  level: 2
+- label: Any TEAE Leading to Study Discontinuation
+  kind: n_pct_m
+  filter:
+    TRTEMFL: Y
+    AEACN: STUDY DISCONTINUED
+- label: Any TEAE of Special Interest
+  kind: n_pct_m
+  filter:
+    TRTEMFL: Y
+    CQ01NAM: DERMATOLOGIC EVENTS
+- label: Any Related TEAE of Special Interest
+  kind: n_pct_m
+  filter:
+    TRTEMFL: Y
+    CQ01NAM: DERMATOLOGIC EVENTS
+    related: true
+- label: Any Fatal TEAE
+  kind: n_pct_m
+  filter:
+    TRTEMFL: Y
+    AESDTH: Y
+footnotes:
+- n = incidence, m = number of occurrences, teae = treatment-emergent adverse event.
+- An AE is considered TEAE if {{ teae_definition }}
+- A related AE is defined as {{ related_ae_definition }}
+conditionality: required
+programming_notes:
+- Grade-based rows omitted (CTCAE grading not used in this study; severity captured
+  as MILD/MODERATE/SEVERE).

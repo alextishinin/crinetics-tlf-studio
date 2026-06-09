@@ -1,0 +1,18 @@
+id: f_14_1_1_1
+type: figure
+title_line1: Figure 14.1.1.1
+title_line2: Time to Discontinuation of Study Drug
+title_line3: Safety Analysis Set
+adam_domains:
+- adtte
+- adsl
+analysis_set: SAF
+column_layout: safety_with_total
+figure_kind: kaplan_meier
+figure_params:
+  param: Time to First Dermatologic Event
+  time_var: AVAL
+  censor_var: CNSR
+  group_var: TRTAN
+conditionality: optional
+optional_flag: figure_14_1_1_1_time_to_disc

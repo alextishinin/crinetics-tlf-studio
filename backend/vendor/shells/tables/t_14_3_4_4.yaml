@@ -1,0 +1,29 @@
+id: t_14_3_4_4
+type: table
+title_line1: Table 14.3.4.4
+title_line2: Summary of Abnormality of Hematology
+title_line3: Safety Analysis Set
+adam_domains:
+- adlbh
+- adsl
+analysis_set: SAF
+column_layout: safety_with_total
+row_schema:
+- label: '{param}'
+  kind: abnormality
+  level: 0
+  group_by: PARAM
+  categories:
+  - N
+  - L
+  - H
+  - Missing
+  category_labels:
+    N: Normal
+    L: Low
+    H: High
+    Missing: Missing
+sort: Parameter alphabetical
+footnotes:
+- Baseline is defined as {{ baseline_definition }}
+conditionality: required

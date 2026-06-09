@@ -1,0 +1,55 @@
+id: t_14_3_1_14
+type: table
+title_line1: Table 14.3.1.14
+title_line2: Summary of Treatment-Emergent Adverse Events by System Organ Class, Preferred
+  Term and Strongest Relationship to Study Drug
+title_line3: Safety Analysis Set
+adam_domains:
+- adae
+analysis_set: SAF
+column_layout: safety_with_total
+base_filter:
+  TRTEMFL: Y
+relationship_levels:
+- PROBABLE
+- POSSIBLE
+- REMOTE
+- NONE
+relationship_labels:
+  PROBABLE: Related
+  POSSIBLE: Related
+  REMOTE: Unrelated
+  NONE: Unrelated
+row_schema:
+- label: Subjects with at Least One Treatment-Emergent Adverse Event
+  kind: n_pct
+  level: 0
+- label: '{relationship}'
+  kind: n_pct
+  level: 2
+  group_by: AEREL_GROUPED
+- label: '{soc}'
+  kind: n_pct
+  level: 0
+  group_by: AEBODSYS
+- label: '{relationship}'
+  kind: n_pct
+  level: 2
+  group_by: AEREL_GROUPED
+- label: '{pt}'
+  kind: n_pct
+  level: 1
+  group_by: AEDECOD
+- label: '{relationship}'
+  kind: n_pct
+  level: 2
+  group_by: AEREL_GROUPED
+footnotes:
+- teae = treatment-emergent adverse event, soc = system organ class, pt = preferred
+  term.
+- MedDRA Version {{ meddra_version }}.
+- Related AEs are defined as {{ related_ae_definition }}
+- Subjects with multiple adverse events within the same SOC or PT are only counted
+  once at the strongest relationship within the respective category.
+conditionality: optional
+optional_flag: table_14_3_1_14_ae_by_causality

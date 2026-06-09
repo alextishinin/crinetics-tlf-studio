@@ -1,0 +1,142 @@
+version: 1
+study_id: CDISCPILOT01
+header_template: Crinetics Pharmaceuticals    {{ protocol_number }}
+footer_template: 'Source: {{ source }}
+
+  Data Extracted: {{ data_extract_date }}
+
+  v{{ sas_version }} {{ run_datetime }}    Page {{ page }} of {{ pages }}
+
+  '
+column_layouts:
+  safety_with_total:
+  - id: low
+    label: Xanomeline Low Dose
+    trtpn: 54
+    n_source: SAF
+    show_n: true
+  - id: high
+    label: Xanomeline High Dose
+    trtpn: 81
+    n_source: SAF
+    show_n: true
+  - id: placebo
+    label: Placebo
+    trtpn: 0
+    n_source: SAF
+    show_n: true
+  - id: total
+    label: Total
+    trtpn: null
+    n_source: SAF
+    show_n: true
+    is_total: true
+  efficacy_no_total:
+  - id: low
+    label: Xanomeline Low Dose
+    trtpn: 54
+    n_source: EFF
+    show_n: true
+  - id: high
+    label: Xanomeline High Dose
+    trtpn: 81
+    n_source: EFF
+    show_n: true
+  - id: placebo
+    label: Placebo
+    trtpn: 0
+    n_source: EFF
+    show_n: true
+chemistry_thresholds:
+  ALT:
+  - label: ALT > 3 x ULN
+    op: '>'
+    x_uln: 3
+  - label: ALT > 5 x ULN
+    op: '>'
+    x_uln: 5
+  - label: ALT > 10 x ULN
+    op: '>'
+    x_uln: 10
+  AST:
+  - label: AST > 3 x ULN
+    op: '>'
+    x_uln: 3
+  - label: AST > 5 x ULN
+    op: '>'
+    x_uln: 5
+  - label: AST > 10 x ULN
+    op: '>'
+    x_uln: 10
+  BILI:
+  - label: Total Bilirubin > 1.5 x ULN
+    op: '>'
+    x_uln: 1.5
+  - label: Total Bilirubin > 2.0 x ULN
+    op: '>'
+    x_uln: 2.0
+hematology_thresholds:
+  HGB:
+  - label: Hemoglobin < 10 g/dL
+    op: <
+    abs_value: 10
+  WBC:
+  - label: WBC < 3.0 x10^9/L
+    op: <
+    abs_value: 3.0
+  - label: WBC < 2.0 x10^9/L
+    op: <
+    abs_value: 2.0
+  PLT:
+  - label: Platelets < 100 x10^9/L
+    op: <
+    abs_value: 100
+  - label: Platelets < 50 x10^9/L
+    op: <
+    abs_value: 50
+shell_files:
+- tables/t_14_1_1_1.yaml
+- tables/t_14_1_1_2.yaml
+- tables/t_14_1_1_3.yaml
+- tables/t_14_1_1_4.yaml
+- tables/t_14_1_2_1.yaml
+- tables/t_14_1_2_2.yaml
+- tables/t_14_1_2_3.yaml
+- tables/t_14_1_2_4.yaml
+- tables/t_14_1_3_1.yaml
+- tables/t_14_1_3_2.yaml
+- tables/t_14_3_1_1.yaml
+- tables/t_14_3_1_2.yaml
+- tables/t_14_3_1_3.yaml
+- tables/t_14_3_1_4.yaml
+- tables/t_14_3_1_5.yaml
+- tables/t_14_3_1_6.yaml
+- tables/t_14_3_1_7.yaml
+- tables/t_14_3_1_8.yaml
+- tables/t_14_3_1_9.yaml
+- tables/t_14_3_1_10.yaml
+- tables/t_14_3_1_11_common.yaml
+- tables/t_14_3_1_11_aesi.yaml
+- tables/t_14_3_1_12.yaml
+- tables/t_14_3_1_13.yaml
+- tables/t_14_3_1_14.yaml
+- tables/t_14_3_4_1.yaml
+- tables/t_14_3_4_2.yaml
+- tables/t_14_3_4_3.yaml
+- tables/t_14_3_4_4.yaml
+- tables/t_14_3_4_5.yaml
+- tables/t_14_3_4_6.yaml
+- tables/t_14_3_5_1.yaml
+- tables/t_14_3_5_2.yaml
+- tables/t_14_3_6_1.yaml
+- tables/t_14_3_6_2.yaml
+- figures/f_14_1_1_1.yaml
+- figures/f_14_3_1_1.yaml
+- figures/f_14_3_4_1.yaml
+- figures/f_14_3_4_2.yaml
+- figures/f_14_3_4_3.yaml
+- figures/f_14_3_5_1.yaml
+- figures/f_14_3_5_2.yaml
+- generic/generic_continuous.yaml
+- generic/generic_categorical.yaml
+- generic/generic_subgroup.yaml

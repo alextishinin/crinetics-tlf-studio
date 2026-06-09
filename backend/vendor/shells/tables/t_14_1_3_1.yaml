@@ -1,0 +1,32 @@
+id: t_14_1_3_1
+type: table
+title_line1: Table 14.1.3.1
+title_line2: Extent of Exposure
+title_line3: Safety Analysis Set
+adam_domains:
+- adsl
+analysis_set: SAF
+column_layout: safety_with_total
+row_schema:
+- label: Duration of Exposure (days)
+  kind: continuous
+  var: TRTDUR
+  level: 0
+- label: Duration of Exposure (days), n (%)
+  kind: categorical_bins
+  var: TRTDUR
+  level: 0
+  bins_key: exposure_duration_bins
+- label: Average Daily Dose (mg)
+  kind: continuous
+  var: AVGDD
+  level: 0
+- label: Cumulative Dose (mg)
+  kind: continuous
+  var: CUMDOSE
+  level: 0
+footnotes:
+- Duration of Exposure is defined as {{ exposure_duration_definition }}.
+conditionality: required
+programming_notes:
+- Categorical duration of exposure bins are configurable in study_config.yaml (exposure_duration_bins).

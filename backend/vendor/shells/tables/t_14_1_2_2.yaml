@@ -1,0 +1,32 @@
+id: t_14_1_2_2
+type: table
+title_line1: Table 14.1.2.2
+title_line2: Medical History
+title_line3: Safety Analysis Set
+adam_domains:
+- adae
+- adsl
+analysis_set: SAF
+column_layout: safety_with_total
+row_schema:
+- label: Subjects with Any Medical History
+  kind: n_pct
+  level: 0
+- label: '{soc}'
+  kind: n_pct
+  level: 0
+- label: '{pt}'
+  kind: n_pct
+  level: 1
+sort: Total descending, then High → Low → Placebo within ties
+footnotes:
+- MedDRA Version {{ meddra_version }}.
+- Subjects may have more than one medical history per system organ class and preferred
+  term. At each level of summarization, a subject was counted once if the subject
+  reported one or more medical histories.
+conditionality: optional
+optional_flag: table_14_1_2_2_medical_history
+programming_notes:
+- Sort by descending frequency of SOC and PT in Total column then High → Low → Placebo
+  (per SAP).
+- Filter ADAE rows where AENTMTFL='Y' for pre-treatment medical history.

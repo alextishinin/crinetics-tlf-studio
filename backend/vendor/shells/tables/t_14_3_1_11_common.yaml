@@ -1,0 +1,26 @@
+id: t_14_3_1_11_common
+type: table
+title_line1: Table 14.3.1.11
+title_line2: Summary of Common Treatment-Emergent Adverse Events occurring >= {{ common_ae_cutoff_pct
+  }}% Frequency by Preferred Term
+title_line3: Safety Analysis Set
+adam_domains:
+- adae
+analysis_set: SAF
+column_layout: safety_with_total
+show_occurrences: true
+base_filter:
+  TRTEMFL: Y
+row_schema:
+- label: '{pt}'
+  kind: n_pct_m
+  level: 0
+  group_by: AEDECOD
+  frequency_cutoff_pct: '{{ common_ae_cutoff_pct }}'
+sort: Total descending by PT, restricted to PTs meeting cutoff in any arm
+footnotes:
+- teae = treatment-emergent adverse event, pt = preferred term.
+- 'Common TEAE: any Preferred Term with frequency >= {{ common_ae_cutoff_pct }}% in
+  any treatment column.'
+conditionality: optional
+optional_flag: table_14_3_1_11_common_aes

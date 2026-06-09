@@ -1,0 +1,23 @@
+id: t_14_3_4_5
+type: table
+title_line1: Table 14.3.4.5
+title_line2: Summary of Subjects with Clinical Chemistry Meeting Specific Levels
+title_line3: Safety Analysis Set
+adam_domains:
+- adlbc
+- adsl
+analysis_set: SAF
+column_layout: safety_with_total
+row_schema:
+- label: '{param}'
+  kind: threshold
+  level: 0
+  group_by: PARAM
+  thresholds_key: chemistry_thresholds
+sort: Parameter alphabetical
+footnotes:
+- uln = upper limit of normal.
+- 'Levels per FDA ''Standard safety tables and figures: integrated guide'' (Aug 2022).
+  Thresholds are configurable in shells/registry.yaml.'
+conditionality: optional
+optional_flag: table_14_3_4_5_chemistry_specific_levels

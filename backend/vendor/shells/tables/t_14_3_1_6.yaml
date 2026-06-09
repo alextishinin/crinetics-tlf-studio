@@ -1,0 +1,33 @@
+id: t_14_3_1_6
+type: table
+title_line1: Table 14.3.1.6
+title_line2: Summary of Serious Related Treatment-Emergent Adverse Events by System
+  Organ Class and Preferred Term
+title_line3: Safety Analysis Set
+adam_domains:
+- adae
+analysis_set: SAF
+column_layout: safety_with_total
+show_occurrences: true
+base_filter:
+  TRTEMFL: Y
+  AESER: Y
+  related: true
+row_schema:
+- label: Subjects with at Least One Serious Related TEAE
+  kind: n_pct_m
+  level: 0
+- label: '{soc}'
+  kind: n_pct_m
+  level: 0
+  group_by: AEBODSYS
+- label: '{pt}'
+  kind: n_pct_m
+  level: 1
+  group_by: AEDECOD
+footnotes:
+- teae = treatment-emergent adverse event, soc = system organ class, pt = preferred
+  term.
+- MedDRA Version {{ meddra_version }}.
+- A related AE is defined as {{ related_ae_definition }}
+conditionality: required

@@ -1,0 +1,26 @@
+id: t_14_1_1_2
+type: table
+title_line1: Table 14.1.1.2
+title_line2: Subject Randomization by Country and Investigator
+title_line3: Randomized Population
+adam_domains:
+- adsl
+analysis_set: ALL
+column_layout: safety_with_total
+row_schema:
+- label: '{country}'
+  kind: header
+  level: 0
+- label: Investigator {n} ({siteid})
+  kind: n_pct
+  denom: column_n
+  source: siteid
+  level: 1
+sort: Country descending frequency, then Investigator
+footnotes: []
+conditionality: optional
+optional_flag: table_14_1_1_2_randomization_by_country
+programming_notes:
+- Required for phase 3 registrational studies with sites in multiple countries; optional
+  for others.
+- Order by descending frequency of country first then by investigator of all subjects.

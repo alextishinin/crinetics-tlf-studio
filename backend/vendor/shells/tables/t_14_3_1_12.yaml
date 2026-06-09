@@ -1,0 +1,30 @@
+id: t_14_3_1_12
+type: table
+title_line1: Table 14.3.1.12
+title_line2: Summary of Related Treatment-Emergent Adverse Events of Special Interest
+  by Category and Preferred Term
+title_line3: Safety Analysis Set
+adam_domains:
+- adae
+analysis_set: SAF
+column_layout: safety_with_total
+show_occurrences: true
+base_filter:
+  TRTEMFL: Y
+  CQ01NAM_not_null: true
+  related: true
+row_schema:
+- label: '{cq01nam}'
+  kind: n_pct_m
+  level: 0
+  group_by: CQ01NAM
+- label: '{pt}'
+  kind: n_pct_m
+  level: 1
+  group_by: AEDECOD
+footnotes:
+- teae = treatment-emergent adverse event, aesi = adverse event of special interest.
+- MedDRA Version {{ meddra_version }}.
+- A related AE is defined as {{ related_ae_definition }}
+conditionality: optional
+optional_flag: table_14_3_1_12_related_aesi

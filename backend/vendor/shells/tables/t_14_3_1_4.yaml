@@ -1,0 +1,12 @@
+id: t_14_3_1_4
+type: table
+title_line1: Table 14.3.1.4
+title_line2: Summary of Grade >=3 Related Treatment-Emergent Adverse Events by System
+  Organ Class and Preferred Term
+title_line3: Safety Analysis Set
+adam_domains:
+- adae
+analysis_set: SAF
+column_layout: safety_with_total
+conditionality: optional
+optional_flag: table_14_3_1_4_grade3_related_aes

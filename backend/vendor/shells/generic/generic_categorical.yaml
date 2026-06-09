@@ -1,0 +1,17 @@
+id: generic_categorical
+type: generic_layout
+title_line1: Table 14.X
+title_line2: Summary of {{ endpoint }}
+title_line3: '{{ analysis_set_label }}'
+adam_domains: []
+analysis_set: EFF
+column_layout: efficacy_no_total
+row_schema:
+- label: '{param}'
+  kind: categorical_by_visit
+  level: 0
+  group_by: PARAM
+- label: '{avisit}'
+  kind: categorical_visit_block
+  level: 1
+  group_by: AVISIT

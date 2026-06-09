@@ -1,0 +1,19 @@
+id: generic_continuous
+type: generic_layout
+title_line1: Table 14.X
+title_line2: Summary of {{ endpoint }}
+title_line3: '{{ analysis_set_label }}'
+adam_domains: []
+analysis_set: EFF
+column_layout: efficacy_no_total
+row_schema:
+- label: '{param}'
+  kind: continuous
+  level: 0
+  group_by: PARAM
+- label: '{avisit}'
+  kind: visit_block
+  level: 1
+  group_by: AVISIT
+footnotes:
+- Baseline is defined as {{ baseline_definition }}

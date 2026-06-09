@@ -1,0 +1,120 @@
+id: t_14_1_2_1
+type: table
+title_line1: Table 14.1.2.1
+title_line2: Demographics and Baseline Characteristics
+title_line3: Randomized Population
+adam_domains:
+- adsl
+analysis_set: ITT
+column_layout: safety_with_total
+row_schema:
+- label: Age (years)
+  kind: continuous
+  var: AGE
+  level: 0
+- label: Age Group (years), n (%)
+  kind: categorical
+  var: AGEGR1
+  level: 0
+  categories:
+  - <65
+  - 65-80
+  - '>80'
+- label: Age Group 2 (years), n (%)
+  kind: categorical
+  var: AGEGR2
+  level: 0
+  categories:
+  - <75
+  - '>=75'
+  optional: true
+- label: Sex, n (%)
+  kind: categorical
+  var: SEX
+  level: 0
+  categories:
+  - F
+  - M
+  category_labels:
+    F: Female
+    M: Male
+- label: Race, n (%)
+  kind: categorical
+  var: RACE
+  level: 0
+  categories:
+  - AMERICAN INDIAN OR ALASKA NATIVE
+  - ASIAN
+  - BLACK OR AFRICAN AMERICAN
+  - NATIVE HAWAIIAN OR OTHER PACIFIC ISLANDER
+  - WHITE
+  - UNKNOWN
+  - OTHER
+  category_labels:
+    AMERICAN INDIAN OR ALASKA NATIVE: American Indian or Alaska Native
+    BLACK OR AFRICAN AMERICAN: Black or African American
+    NATIVE HAWAIIAN OR OTHER PACIFIC ISLANDER: Native Hawaiian or Other Pacific Islander
+    WHITE: White
+    ASIAN: Asian
+    UNKNOWN: Unknown
+    OTHER: Other
+- label: Race Group, n (%)
+  kind: categorical
+  var: RACEGR1
+  level: 0
+  categories:
+  - WHITE
+  - NON-WHITE
+  optional: true
+- label: Ethnicity, n (%)
+  kind: categorical
+  var: ETHNIC
+  level: 0
+  categories:
+  - HISPANIC OR LATINO
+  - NOT HISPANIC OR LATINO
+  - UNKNOWN
+  category_labels:
+    HISPANIC OR LATINO: Hispanic or Latino
+    NOT HISPANIC OR LATINO: Not Hispanic or Latino
+    UNKNOWN: Unknown
+- label: Region, n (%)
+  kind: categorical
+  var: REGION
+  level: 0
+  optional: true
+- label: Country, n (%)
+  kind: categorical
+  var: COUNTRY
+  level: 0
+  optional: true
+- label: Height (cm)
+  kind: continuous
+  var: HEIGHTBL
+  level: 0
+- label: Weight (kg)
+  kind: continuous
+  var: WEIGHTBL
+  level: 0
+- label: Body Mass Index (kg/m2)
+  kind: continuous
+  var: BMIBL
+  level: 0
+- label: Education Level (years)
+  kind: continuous
+  var: EDUCLVL
+  level: 0
+- label: MMSE Total Score
+  kind: continuous
+  var: MMSETOT
+  level: 0
+footnotes:
+- mmse = mini mental state examination, bmi = body mass index.
+- The categories for 'Race' and 'Ethnicity' match the CRF categories. Categories with
+  all zero subjects are omitted.
+conditionality: required
+programming_notes:
+- Add other study population as needed.
+- Categories for Race and Ethnicity match the CRF entries.
+- '''Not Reported'' or ''Unknown'' row should be added for each categorical summary
+  unless it is all zeros.'

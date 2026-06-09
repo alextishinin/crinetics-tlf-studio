@@ -1,0 +1,26 @@
+id: t_14_1_1_4
+type: table
+title_line1: Table 14.1.1.4
+title_line2: Important Protocol Deviation
+title_line3: Randomized Population
+adam_domains:
+- adsl
+analysis_set: ALL
+column_layout: safety_with_total
+row_schema:
+- label: Subjects with at Least One Important Protocol Deviation
+  kind: n_pct
+  level: 0
+- label: '{category}'
+  kind: n_pct
+  level: 0
+- label: '{subcategory}'
+  kind: n_pct
+  level: 1
+footnotes:
+- Subjects may have more than one protocol deviation but are only counted once within
+  each deviation category.
+conditionality: optional
+optional_flag: table_14_1_1_4_protocol_deviations
+programming_notes:
+- If PDs are not classified with subcategories, remove the subcategory rows.

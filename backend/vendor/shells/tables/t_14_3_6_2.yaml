@@ -1,0 +1,54 @@
+id: t_14_3_6_2
+type: table
+title_line1: Table 14.3.6.2
+title_line2: Summary of Subject with Post-Baseline QTcF Meeting Specific Criteria
+title_line3: Safety Analysis Set
+adam_domains: []
+analysis_set: SAF
+column_layout: safety_with_total
+row_schema:
+- label: Maximum QTcF (msec)
+  kind: header
+  level: 0
+- label: '>= 450'
+  kind: qtcf_threshold
+  paramcd: QTCF
+  op: '>='
+  value: 450
+  level: 1
+  basis: max
+- label: '>= 480'
+  kind: qtcf_threshold
+  paramcd: QTCF
+  op: '>='
+  value: 480
+  level: 1
+  basis: max
+- label: '>= 500'
+  kind: qtcf_threshold
+  paramcd: QTCF
+  op: '>='
+  value: 500
+  level: 1
+  basis: max
+- label: Maximum QTcF Change from Baseline
+  kind: header
+  level: 0
+- label: '>= 30'
+  kind: qtcf_threshold
+  paramcd: QTCF
+  op: '>='
+  value: 30
+  level: 1
+  basis: max_chg
+- label: '>= 60'
+  kind: qtcf_threshold
+  paramcd: QTCF
+  op: '>='
+  value: 60
+  level: 1
+  basis: max_chg
+footnotes:
+- QTcF = corrected QT interval by Fridericia method.
+conditionality: optional
+optional_flag: table_14_3_6_2_qtcf_criteria

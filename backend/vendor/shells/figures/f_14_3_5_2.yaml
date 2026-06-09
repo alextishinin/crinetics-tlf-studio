@@ -1,0 +1,20 @@
+id: f_14_3_5_2
+type: figure
+title_line1: Figure 14.3.5.2
+title_line2: Baseline vs. Maximum Post-baseline Blood Pressure
+title_line3: Safety Analysis Set
+adam_domains:
+- advs
+- adsl
+analysis_set: SAF
+figure_kind: baseline_vs_max_scatter
+figure_params:
+  params:
+  - Systolic Blood Pressure (mmHg)
+  - Diastolic Blood Pressure (mmHg)
+footnotes:
+- Baseline is defined as {{ baseline_definition }}
+- Gray dotted line = no decrease; blue line = treatment linear regression; gray dashed
+  line = placebo linear regression.
+conditionality: optional
+optional_flag: figure_14_3_5_2_bp_baseline_vs_max

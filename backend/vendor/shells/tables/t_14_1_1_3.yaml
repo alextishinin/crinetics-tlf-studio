@@ -1,0 +1,32 @@
+id: t_14_1_1_3
+type: table
+title_line1: Table 14.1.1.3
+title_line2: Analysis Set and Reasons for Exclusion from Analysis Sets
+title_line3: Randomized Population
+adam_domains:
+- adsl
+analysis_set: ALL
+column_layout: safety_with_total
+row_schema:
+- label: Safety Analysis Set (SAF)
+  kind: n_pct
+  source: saffl_y
+  level: 0
+- label: Not Included in the SAF
+  kind: n_pct
+  source: saffl_n
+  level: 0
+- label: Intent-To-Treat Set (ITT)
+  kind: n_pct
+  source: ittfl_y
+  level: 0
+- label: Not Included in the ITT
+  kind: n_pct
+  source: ittfl_n
+  level: 0
+footnotes: []
+conditionality: optional
+optional_flag: table_14_1_1_3_analysis_sets
+programming_notes:
+- Optional. Needed when derivation for analysis sets is complex and multiple components
+  contribute to the definition.

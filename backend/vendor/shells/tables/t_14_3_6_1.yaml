@@ -1,0 +1,31 @@
+id: t_14_3_6_1
+type: table
+title_line1: Table 14.3.6.1
+title_line2: Summary of Electrocardiogram
+title_line3: Safety Population
+adam_domains: []
+analysis_set: SAF
+column_layout: safety_with_total
+row_schema:
+- label: Interpretation, n (%)
+  kind: header
+  level: 0
+- label: '{avisit}'
+  kind: ecg_interp_block
+  level: 1
+  group_by: AVISIT
+  categories:
+  - Normal
+  - Abnormal Not CS
+  - Abnormal CS
+- label: '{param}'
+  kind: continuous
+  level: 0
+  group_by: PARAM
+- label: '{avisit}'
+  kind: visit_block
+  level: 1
+  group_by: AVISIT
+footnotes:
+- Baseline is defined as {{ baseline_definition }}
+conditionality: required

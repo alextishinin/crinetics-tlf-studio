@@ -1,0 +1,24 @@
+id: t_14_3_5_1
+type: table
+title_line1: Table 14.3.5.1
+title_line2: Summary of Vital Signs
+title_line3: Safety Analysis Set
+adam_domains:
+- advs
+- adsl
+analysis_set: SAF
+column_layout: safety_with_total
+row_schema:
+- label: '{param}'
+  kind: continuous
+  level: 0
+  group_by: PARAM
+  exclude_params:
+  - Height (cm)
+- label: '{avisit}'
+  kind: visit_block
+  level: 1
+  group_by: AVISIT
+footnotes:
+- Baseline is defined as {{ baseline_definition }}
+conditionality: required

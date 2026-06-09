@@ -1,0 +1,19 @@
+id: f_14_3_1_1
+type: figure
+title_line1: Figure 14.3.1.1
+title_line2: Treatment-Emergent Adverse Events by System Organ Class
+title_line3: Safety Analysis Set
+adam_domains:
+- adae
+- adsl
+analysis_set: SAF
+figure_kind: forest_risk_diff
+figure_params:
+  group_by: AEBODSYS
+  reference_arm_trtpn: 0
+  base_filter:
+    TRTEMFL: Y
+footnotes:
+- An AE is considered TEAE if {{ teae_definition }}
+conditionality: optional
+optional_flag: figure_14_3_1_1_ae_by_soc

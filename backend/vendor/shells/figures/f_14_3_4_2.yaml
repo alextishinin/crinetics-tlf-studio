@@ -1,0 +1,15 @@
+id: f_14_3_4_2
+type: figure
+title_line1: Figure 14.3.4.2
+title_line2: Mean Hematology Change from Baseline Over Time
+title_line3: Safety Analysis Set
+adam_domains:
+- adlbh
+- adsl
+analysis_set: SAF
+figure_kind: mean_cfb_over_time
+figure_params:
+  group_by: PARAM
+  time_var: AVISITN
+conditionality: optional
+optional_flag: figure_14_3_4_2_hematology_cfb
