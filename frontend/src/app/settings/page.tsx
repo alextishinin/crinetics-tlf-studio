@@ -20,6 +20,21 @@ export default function SettingsPage() {
     onSuccess: () => {
       setApiKey("");
       qc.invalidateQueries({ queryKey: ["settings"] });
+      qc.invalidateQueries({ queryKey: ["models"] });
+    },
+  });
+
+  // Model selection — options come from the Anthropic API (key required).
+  const { data: modelsData } = useQuery({
+    queryKey: ["models"],
+    queryFn: () => settingsApi.getModels(),
+    enabled: !!data?.key_present,
+  });
+  const setModel = useMutation({
+    mutationFn: (model: string) => settingsApi.setModel(model),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["settings"] });
+      qc.invalidateQueries({ queryKey: ["models"] });
     },
   });
 
@@ -116,16 +131,50 @@ export default function SettingsPage() {
 
         <Card>
           <CardHeader>
+            <CardTitle className="text-base">AI model</CardTitle>
+            <CardDescription>
+              Which Claude model the app uses for all AI features. Opus is the most capable but
+              costs more; Sonnet is a good balance; Haiku is the fastest and cheapest.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {!data?.key_present ? (
+              <p className="text-sm text-amber-700">Add an API key above to choose a model.</p>
+            ) : (
+              <>
+                <select
+                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                  value={data?.model ?? ""}
+                  onChange={(e) => setModel.mutate(e.target.value)}
+                  disabled={setModel.isPending}
+                >
+                  {(modelsData?.models ?? []).map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.display_name || m.id}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-slate-500">
+                  Current: <span className="font-mono">{data?.model ?? "—"}</span>
+                </p>
+                {modelsData?.error && <p className="text-xs text-amber-700">{modelsData.error}</p>}
+                {setModel.isPending && <p className="text-xs text-slate-500">Saving…</p>}
+                {setModel.data?.saved && (
+                  <p className="text-xs text-emerald-700">{setModel.data.message}</p>
+                )}
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
             <CardTitle className="text-base">About</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
             <div className="flex justify-between border-b pb-1">
               <span className="text-slate-500">Version</span>
               <span className="font-medium">{data?.app_version ?? "—"}</span>
-            </div>
-            <div className="flex justify-between border-b pb-1">
-              <span className="text-slate-500">AI model</span>
-              <span className="font-mono text-xs">{data?.model ?? "—"}</span>
             </div>
             {isDesktop && (
               <div className="flex items-center justify-between gap-3 pt-2">

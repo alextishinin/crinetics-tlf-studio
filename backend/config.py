@@ -82,6 +82,11 @@ def get_settings() -> Settings:
         _apply_runtime_paths(s)
         if not s.anthropic_api_key:
             s.anthropic_api_key = _load_api_key_fallback()
+        # A model chosen in the in-app Settings (stored in AppData) is the
+        # authoritative choice — it overrides the .env / built-in default.
+        appdata_model = (_appdata_config().get("anthropic_model") or "").strip()
+        if appdata_model:
+            s.anthropic_model = appdata_model
         _ensure_tlf_importable(s)
         s.studies_root.mkdir(parents=True, exist_ok=True)
         _settings = s
@@ -160,6 +165,24 @@ def _read_env_key(env_path: Path, name: str) -> str:
     return ""
 
 
+def _appdata_config() -> dict:
+    """Read the per-user config.json (key + model), or {} if missing/invalid."""
+    cfg_path = appdata_dir() / "config.json"
+    if cfg_path.exists():
+        try:
+            return json.loads(cfg_path.read_text(encoding="utf-8"))
+        except Exception:
+            return {}
+    return {}
+
+
+def _write_appdata_config(updates: dict) -> None:
+    cfg_path = appdata_dir() / "config.json"
+    data = _appdata_config()
+    data.update(updates)
+    cfg_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+
+
 def set_api_key(key: str) -> None:
     """Persist the Anthropic API key to the per-user config and apply it live.
 
@@ -168,13 +191,13 @@ def set_api_key(key: str) -> None:
     new key immediately — no restart needed.
     """
     key = (key or "").strip()
-    cfg_path = appdata_dir() / "config.json"
-    data: dict = {}
-    if cfg_path.exists():
-        try:
-            data = json.loads(cfg_path.read_text(encoding="utf-8"))
-        except Exception:
-            data = {}
-    data["anthropic_api_key"] = key
-    cfg_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    _write_appdata_config({"anthropic_api_key": key})
     get_settings().anthropic_api_key = key
+
+
+def set_model(model: str) -> None:
+    """Persist the chosen Anthropic model to the per-user config and apply it
+    live (the next AI call uses it; no restart needed)."""
+    model = (model or "").strip()
+    _write_appdata_config({"anthropic_model": model})
+    get_settings().anthropic_model = model

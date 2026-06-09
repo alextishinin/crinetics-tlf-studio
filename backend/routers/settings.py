@@ -5,7 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter
 from pydantic import BaseModel
 
-from config import APP_VERSION, get_settings, set_api_key
+from config import APP_VERSION, get_settings, set_api_key, set_model
 
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
@@ -13,6 +13,27 @@ router = APIRouter(prefix="/api/settings", tags=["settings"])
 
 class ApiKeyUpdate(BaseModel):
     api_key: str
+
+
+class ModelUpdate(BaseModel):
+    model: str
+
+
+class ModelOption(BaseModel):
+    id: str
+    display_name: str = ""
+
+
+class ModelsResponse(BaseModel):
+    models: list[ModelOption]
+    current: str
+    error: str | None = None
+
+
+class ModelSaveResult(BaseModel):
+    saved: bool
+    model: str
+    message: str
 
 
 class SettingsInfo(BaseModel):
@@ -58,6 +79,43 @@ def update_api_key(payload: ApiKeyUpdate) -> ApiKeySaveResult:
         )
     valid, message = _validate_key()
     return ApiKeySaveResult(saved=True, key_present=True, valid=valid, message=message)
+
+
+@router.get("/models", response_model=ModelsResponse)
+def list_models() -> ModelsResponse:
+    """Models the current API key can access (from the Anthropic API)."""
+    s = get_settings()
+    if not s.anthropic_api_key:
+        return ModelsResponse(models=[], current=s.anthropic_model, error="Set an API key first.")
+    try:
+        import anthropic
+
+        client = anthropic.Anthropic(api_key=s.anthropic_api_key)
+        data = client.models.list(limit=100).data
+        models = [
+            ModelOption(id=m.id, display_name=getattr(m, "display_name", "") or m.id)
+            for m in data
+        ]
+        # Make sure the currently-selected model is always selectable, even if
+        # it's an alias the list endpoint doesn't return verbatim.
+        if s.anthropic_model and not any(m.id == s.anthropic_model for m in models):
+            models.insert(0, ModelOption(id=s.anthropic_model, display_name=s.anthropic_model))
+        return ModelsResponse(models=models, current=s.anthropic_model)
+    except Exception as exc:  # noqa: BLE001
+        return ModelsResponse(
+            models=[ModelOption(id=s.anthropic_model, display_name=s.anthropic_model)],
+            current=s.anthropic_model,
+            error=f"Couldn't list models ({type(exc).__name__}).",
+        )
+
+
+@router.post("/model", response_model=ModelSaveResult)
+def update_model(payload: ModelUpdate) -> ModelSaveResult:
+    model = (payload.model or "").strip()
+    if not model:
+        return ModelSaveResult(saved=False, model="", message="No model provided.")
+    set_model(model)
+    return ModelSaveResult(saved=True, model=model, message=f"Model set to {model}.")
 
 
 def _validate_key() -> tuple[bool, str]:

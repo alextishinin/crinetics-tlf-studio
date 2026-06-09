@@ -11,3 +11,20 @@ export interface ApiKeySaveResult {
   valid: boolean;
   message: string;
 }
+
+export interface ModelOption {
+  id: string;
+  display_name: string;
+}
+
+export interface ModelsResponse {
+  models: ModelOption[];
+  current: string;
+  error: string | null;
+}
+
+export interface ModelSaveResult {
+  saved: boolean;
+  model: string;
+  message: string;
+}

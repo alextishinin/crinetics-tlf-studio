@@ -23,7 +23,12 @@ import type {
   ProtocolExtractionResponse,
   SapExtractionResponse,
 } from "@/types/ai";
-import type { ApiKeySaveResult, SettingsInfo } from "@/types/settings";
+import type {
+  ApiKeySaveResult,
+  ModelSaveResult,
+  ModelsResponse,
+  SettingsInfo,
+} from "@/types/settings";
 
 export class ApiError extends Error {
   status: number;
@@ -135,6 +140,12 @@ export const settings = {
     http<ApiKeySaveResult>("/api/settings/api-key", {
       method: "POST",
       body: JSON.stringify({ api_key: apiKey }),
+    }),
+  getModels: () => http<ModelsResponse>("/api/settings/models"),
+  setModel: (model: string) =>
+    http<ModelSaveResult>("/api/settings/model", {
+      method: "POST",
+      body: JSON.stringify({ model }),
     }),
 };
 
