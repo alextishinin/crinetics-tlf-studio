@@ -1,0 +1,66 @@
+# TLF Studio — desktop shell (Electron)
+
+Phase 2 of desktop packaging. Electron wraps the two sidecars into one
+window:
+
+```
+Electron main (main.js)
+  ├─ spawns backend.exe            (frozen FastAPI, port 8000)
+  ├─ spawns Next standalone server (run with Electron's Node, port 3000)
+  ├─ waits for /health + /studies, then opens the window
+  └─ kills both sidecars on quit
+```
+
+It's `launch.bat`, but hidden, bundled, and self-cleaning. No Python, uv,
+Node, or git needed on the target machine (Electron brings its own Node;
+the backend is frozen).
+
+## Why a Next *server* (not static export)
+
+The app's routes — `/studies/[studyId]`, `…/preview/[tableId]` — are
+client-rendered with **runtime** IDs (studies are created in the app), and
+there's no `generateStaticParams`. App-Router static export requires every
+dynamic param to be known at build time, so it can't represent these routes
+without a large routing refactor. `output: "standalone"` runs the real Next
+server and supports them with zero changes. Confirmed: the standalone server
+serves `/studies/<any-id>` with HTTP 200.
+
+## Run it in dev
+
+Prerequisites (built once):
+
+```cmd
+:: 1. Freeze the backend  (see ../backend/BUILD.md)
+cd ..\backend
+.venv\Scripts\pyinstaller.exe backend.spec --noconfirm
+
+:: 2. Build + assemble the frontend standalone
+cd ..\frontend
+npm run build
+cd ..\desktop
+npm run build:frontend     :: copies static/ + public/ into the standalone
+
+:: 3. Launch the desktop app
+npm install                :: first time only (installs Electron)
+npm start
+```
+
+> Ports 8000 (backend) and 3000 (frontend) must be free — close the dev
+> `launch.bat` app first, since it uses the same ports.
+
+Sidecar logs are written to the Electron `userData/logs/` directory
+(`backend.log`, `frontend.log`) for troubleshooting.
+
+## Configuration
+
+| Env var | Default | Purpose |
+|---|---|---|
+| `TLF_STUDIO_BACKEND_PORT` | 8000 | Backend port (must match the value the frontend was built with). |
+| `TLF_STUDIO_FRONTEND_PORT` | 3000 | Next server port (any free port). |
+
+## Next (Phase 3)
+
+`electron-builder` produces a one-click NSIS installer and `electron-updater`
+wires auto-updates from GitHub Releases. The packaged layout places
+`backend/` and `frontend/` under `resources/` (already handled by the path
+logic in `main.js`).

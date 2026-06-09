@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>TLF Studio</title>
+    <style>
+      :root { color-scheme: light; }
+      html, body {
+        height: 100%;
+        margin: 0;
+        font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        background: #ffffff;
+        color: #0f172a;
+      }
+      .wrap {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 18px;
+        padding: 24px;
+        text-align: center;
+      }
+      .brand { font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
+      .sub { font-size: 13px; color: #64748b; max-width: 520px; white-space: pre-line; }
+      .spinner {
+        width: 34px; height: 34px;
+        border: 3px solid #e2e8f0;
+        border-top-color: #0d9488;
+        border-radius: 50%;
+        animation: spin 0.9s linear infinite;
+      }
+      .error .spinner { display: none; }
+      .error .brand { color: #b91c1c; }
+      .badge { font-size: 11px; color: #94a3b8; }
+      @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+  </head>
+  <body>
+    <div class="wrap" id="wrap">
+      <div class="spinner" id="spinner"></div>
+      <div class="brand" id="brand">TLF Studio</div>
+      <div class="sub" id="sub">Starting…</div>
+      <div class="badge">Crinetics Pharmaceuticals · Internal</div>
+    </div>
+    <script>
+      const params = new URLSearchParams(location.search);
+      const msg = params.get("msg") || "Starting…";
+      const isError = params.get("error") === "1";
+      document.getElementById("sub").textContent = msg;
+      if (isError) {
+        document.getElementById("wrap").classList.add("error");
+        document.getElementById("brand").textContent = "TLF Studio couldn’t start";
+      }
+    </script>
+  </body>
+</html>
