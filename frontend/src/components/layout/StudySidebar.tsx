@@ -7,6 +7,7 @@ import {
   Download,
   FlaskConical,
   PlayCircle,
+  ScrollText,
   Settings,
 } from "lucide-react";
 
@@ -19,6 +20,7 @@ const ITEMS = (sid: string) => [
   { href: `/studies/${sid}/shells`, label: "Select TFLs", icon: ClipboardList },
   { href: `/studies/${sid}/generate`, label: "Generate", icon: PlayCircle },
   { href: `/studies/${sid}/outputs`, label: "Outputs", icon: Download },
+  { href: `/studies/${sid}/audit`, label: "Audit Trail", icon: ScrollText },
 ];
 
 export function StudySidebar({ studyId }: { studyId: string }) {

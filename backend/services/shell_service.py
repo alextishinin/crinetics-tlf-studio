@@ -234,7 +234,18 @@ def list_for_study(study_id: str) -> ShellListResponse:
 def save_selections(study_id: str, optional_outputs: dict[str, bool]) -> dict[str, bool]:
     """Persist optional_outputs into the study's config.yaml."""
     config = study_service.read_config(study_id)
-    config["optional_outputs"] = {**(config.get("optional_outputs") or {}), **optional_outputs}
+    old = config.get("optional_outputs") or {}
+    changed = {k: v for k, v in optional_outputs.items() if old.get(k) != v}
+    config["optional_outputs"] = {**old, **optional_outputs}
     from services.study_service import _write_config, study_dir
     _write_config(study_dir(study_id), config)
+
+    if changed:
+        from services import audit_service
+
+        audit_service.log_event(
+            study_id, "tfl.selection_updated",
+            {"enabled": [k for k, v in changed.items() if v],
+             "disabled": [k for k, v in changed.items() if not v]},
+        )
     return config["optional_outputs"]

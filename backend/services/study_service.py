@@ -114,6 +114,13 @@ def create_study(payload: StudyCreate) -> StudyDetail:
     config = _seed_config(payload)
     _write_meta(path, meta)
     _write_config(path, config)
+
+    from services import audit_service
+
+    audit_service.log_event(
+        study_id, "study.created",
+        {"title": payload.title, "protocol_number": payload.protocol_number or ""},
+    )
     return StudyDetail(meta=meta, config=config)
 
 
@@ -189,9 +196,16 @@ def update_config(study_id: str, update: StudyUpdate) -> StudyDetail:
         sap = patch["sap_definitions"]
         patch["sap_definitions"] = sap if isinstance(sap, dict) else sap.model_dump()
 
+    from services import audit_service
+
+    changes = audit_service.config_diff(config, patch)
+
     config.update(patch)
     path = study_dir(study_id)
     _write_config(path, config)
+
+    if changes:
+        audit_service.log_event(study_id, "study.config_updated", {"changes": changes})
 
     meta = read_meta(study_id)
     meta_updates: dict[str, Any] = {"updated_at": datetime.now(tz=timezone.utc)}

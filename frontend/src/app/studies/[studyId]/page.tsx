@@ -110,7 +110,7 @@ export default function StudyOverviewPage() {
             icon={<FileText className="h-5 w-5" />}
             label="Outputs Generated"
             value={String(generated)}
-            sub={`${approved} approved · ${failed} failed`}
+            sub={`${approved} signed off · ${failed} failed`}
             tone={failed > 0 ? "warn" : "default"}
           />
           <KpiCard

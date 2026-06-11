@@ -45,6 +45,10 @@ export interface FigurePreviewData {
 
 export type PreviewData = TablePreviewData | FigurePreviewData;
 
+// Review workflow: pending (QC outstanding) -> qc_passed | qc_failed ->
+// approved (biostat signed off).
+export type OutputStatus = "pending" | "qc_passed" | "qc_failed" | "approved";
+
 export interface OutputRecord {
   output_id: string;
   filename: string;
@@ -53,6 +57,43 @@ export interface OutputRecord {
   population: string;
   generated_at: string;
   size_bytes: number;
-  status: "pending" | "approved";
+  status: OutputStatus;
   audit_path: string | null;
+}
+
+export interface QcChecklistItem {
+  id: string;
+  label: string;
+  result: "pass" | "fail" | "na";
+  comment: string;
+}
+
+export interface QcRecord {
+  reviewer: string;
+  performed_at: string;
+  result: "pass" | "fail";
+  items: QcChecklistItem[];
+  comments: string;
+  auto_checks: Record<string, unknown>;
+}
+
+export interface SignoffRecord {
+  name: string;
+  role: string;
+  signed_at: string;
+  comment: string;
+  qc_reviewer: string;
+  qc_performed_at: string;
+}
+
+export interface OutputAudit {
+  generated?: {
+    at: string;
+    table_id: string;
+    filename: string;
+    data_extract_date: string;
+  };
+  qc?: QcRecord;
+  signoff?: SignoffRecord;
+  review_history?: Record<string, unknown>[];
 }

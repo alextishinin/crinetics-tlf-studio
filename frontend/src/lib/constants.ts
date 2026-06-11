@@ -10,8 +10,10 @@ export const STATUS_LABELS: Record<string, string> = {
   running: "Running",
   failed: "Failed",
   cancelled: "Cancelled",
-  approved: "Approved",
-  pending: "Pending Review",
+  approved: "Signed Off",
+  pending: "Pending QC",
+  qc_passed: "QC Passed",
+  qc_failed: "QC Failed",
 };
 
 export const STATUS_COLORS: Record<string, string> = {
@@ -25,4 +27,6 @@ export const STATUS_COLORS: Record<string, string> = {
   cancelled: "bg-slate-200 text-slate-500",
   approved: "bg-emerald-100 text-emerald-700",
   pending: "bg-slate-200 text-slate-700",
+  qc_passed: "bg-blue-100 text-blue-700",
+  qc_failed: "bg-rose-100 text-rose-700",
 };

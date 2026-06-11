@@ -187,6 +187,13 @@ def submit(study_id: str, table_ids: list[str], *, triggered_by: str = "user") -
         existing = _read_jobs(study_id)
         existing.extend([r.model_dump(mode="json") for r in records])
         _write_jobs(study_id, existing)
+
+    from services import audit_service
+
+    audit_service.log_event(
+        study_id, "generation.submitted",
+        {"table_ids": table_ids, "triggered_by": triggered_by},
+    )
     return records
 
 
@@ -232,8 +239,14 @@ def run_inline(study_id: str, job_id: str) -> JobRecord:
         status=JobStatus.RUNNING.value,
         started_at=datetime.now(tz=timezone.utc),
     )
+    from services import audit_service
+
     try:
         out_path = _do_generate(study_id, record.table_id)
+        audit_service.log_event(
+            study_id, "generation.completed",
+            {"table_id": record.table_id, "filename": out_path.name},
+        )
         return update_job(
             study_id, job_id,
             status=JobStatus.COMPLETE.value,
@@ -242,6 +255,10 @@ def run_inline(study_id: str, job_id: str) -> JobRecord:
         )
     except Exception as exc:
         tb = traceback.format_exc()
+        audit_service.log_event(
+            study_id, "generation.failed",
+            {"table_id": record.table_id, "error": f"{type(exc).__name__}: {exc}"},
+        )
         return update_job(
             study_id, job_id,
             status=JobStatus.FAILED.value,
@@ -291,4 +308,15 @@ def _do_generate(study_id: str, table_id: str) -> Path:
     # configure_for_study + generation must run as one critical section.
     with TLF_LOCK:
         configure_for_study(cfg, sdir)
-        return Path(dispatch[table_id](cfg, registry))
+        out_path = Path(dispatch[table_id](cfg, registry))
+
+    # Stamp generation metadata into the audit record and void any prior
+    # QC / sign-off — the file changed, so the previous review is stale.
+    from services import outputs_service
+
+    outputs_service.record_generated(
+        study_id, out_path,
+        table_id=table_id,
+        data_extract_date=getattr(cfg, "data_extract_date", None),
+    )
+    return out_path

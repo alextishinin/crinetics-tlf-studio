@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
@@ -13,7 +14,7 @@ from models.study import (
     StudyUpdate,
     UploadResult,
 )
-from services import adam_service, study_service
+from services import adam_service, audit_service, study_service
 
 
 router = APIRouter(prefix="/api/studies", tags=["studies"])
@@ -62,9 +63,16 @@ async def upload_files(study_id: str, files: list[UploadFile] = File(...)) -> Up
 
     data_dir = path / "data"
     data_dir.mkdir(parents=True, exist_ok=True)
+    uploaded: list[dict] = []
     for upload in files:
         target = data_dir / Path(upload.filename or "unknown").name
         contents = await upload.read()
         target.write_bytes(contents)
+        uploaded.append({
+            "filename": target.name,
+            "size_bytes": len(contents),
+            "sha256": hashlib.sha256(contents).hexdigest(),
+        })
 
+    audit_service.log_event(study_id, "data.uploaded", {"files": uploaded})
     return adam_service.extract_metadata(study_id, data_dir)

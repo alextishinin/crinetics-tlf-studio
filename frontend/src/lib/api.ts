@@ -13,6 +13,7 @@ import type { ShellListResponse } from "@/types/shell";
 import type {
   JobRecord,
   JobSubmitResponse,
+  OutputAudit,
   OutputRecord,
   PreviewData,
 } from "@/types/job";
@@ -29,6 +30,7 @@ import type {
   ModelsResponse,
   SettingsInfo,
 } from "@/types/settings";
+import type { AuditTrailResponse } from "@/types/audit";
 
 export class ApiError extends Error {
   status: number;
@@ -153,19 +155,47 @@ export const settings = {
 export const outputs = {
   list: (studyId: string) =>
     http<OutputRecord[]>(`/api/studies/${studyId}/outputs`),
-  setStatus: (studyId: string, outputId: string, status: string) =>
+  // Reset an output's review back to Pending QC (archives prior records).
+  resetReview: (studyId: string, outputId: string) =>
     http<{ status: string }>(
       `/api/studies/${studyId}/outputs/${outputId}/status`,
-      { method: "POST", body: JSON.stringify({ status }) },
+      { method: "POST", body: JSON.stringify({ status: "pending" }) },
+    ),
+  qc: (
+    studyId: string,
+    outputId: string,
+    payload: {
+      reviewer: string;
+      items: { id: string; label: string; result: "pass" | "fail" | "na"; comment: string }[];
+      comments: string;
+      auto_checks: Record<string, unknown>;
+    },
+  ) =>
+    http<{ status: string; audit: OutputAudit }>(
+      `/api/studies/${studyId}/outputs/${outputId}/qc`,
+      { method: "POST", body: JSON.stringify(payload) },
+    ),
+  signoff: (studyId: string, outputId: string, payload: { name: string; comment: string }) =>
+    http<{ status: string; audit: OutputAudit }>(
+      `/api/studies/${studyId}/outputs/${outputId}/signoff`,
+      { method: "POST", body: JSON.stringify(payload) },
     ),
   downloadUrl: (studyId: string, outputId: string) =>
     `${API_BASE_URL}/api/studies/${studyId}/outputs/${outputId}/download`,
   packageUrl: (studyId: string, approvedOnly = false) =>
     `${API_BASE_URL}/api/studies/${studyId}/outputs/package?approved_only=${approvedOnly}`,
   audit: (studyId: string, outputId: string) =>
-    http<Record<string, unknown>>(
+    http<OutputAudit>(
       `/api/studies/${studyId}/outputs/${outputId}/audit`,
     ),
+};
+
+// ---- study audit trail ----
+export const auditTrail = {
+  list: (studyId: string) =>
+    http<AuditTrailResponse>(`/api/studies/${studyId}/audit-trail`),
+  exportUrl: (studyId: string) =>
+    `${API_BASE_URL}/api/studies/${studyId}/audit-trail/export`,
 };
 
 // ---- ai ----
