@@ -149,41 +149,6 @@ def categorical_summary(
 # Change from baseline
 # ---------------------------------------------------------------------------
 
-def cfb_visit_summary(
-    df: pl.DataFrame,
-    *,
-    value_col: str = "AVAL",
-    chg_col: str = "CHG",
-    base_col: str = "BASE",
-    arm_col: str = "TRT01PN",
-    visit_col: str = "AVISIT",
-    arms: Iterable[int],
-) -> dict[str, dict[int, ContinuousSummary]]:
-    """Return {visit -> {arm -> ContinuousSummary on CHG}} for a parameter.
-
-    Only subjects with both non-null BASE and non-null AVAL at that visit are
-    included in n.
-    """
-    eligible = df.filter(pl.col(base_col).is_not_null() & pl.col(value_col).is_not_null())
-    visits = sorted(eligible.select(visit_col).drop_nulls().unique().to_series().to_list())
-    out: dict[str, dict[int, ContinuousSummary]] = {}
-    for v in visits:
-        out[v] = {}
-        sub = eligible.filter(pl.col(visit_col) == v)
-        out[v] = continuous_summary(
-            sub, value_col=chg_col, arm_col=arm_col, arms=arms
-        ).stats  # type: ignore[assignment]
-        # repack the dict-of-dicts as a fresh ContinuousSummary per arm for symmetry
-    # The signature says "{arm -> ContinuousSummary}" but the body produced
-    # raw {arm -> {stat -> val}}.  Fix it cleanly below.
-    fixed: dict[str, dict[int, ContinuousSummary]] = {}
-    for v, arm_stats in out.items():
-        fixed[v] = {}
-        for arm in arms:
-            fixed[v][arm] = ContinuousSummary(stats={arm: arm_stats.get(arm, {})})  # type: ignore[arg-type]
-    return fixed
-
-
 def visit_summary(
     df: pl.DataFrame,
     *,

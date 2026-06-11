@@ -61,7 +61,12 @@ def generate(
 
     has_chg = "CHG" in advs.columns
     has_ablfl = "ABLFL" in advs.columns
-    params = sorted(advs.select("PARAM").drop_nulls().unique().to_series().to_list())
+    # Shell mode replaces the body with the static layout below — skip the
+    # per-parameter aggregation entirely rather than computing and discarding.
+    if cfg.shell_mode:
+        params: list[str] = []
+    else:
+        params = sorted(advs.select("PARAM").drop_nulls().unique().to_series().to_list())
     body_rows: list[list[str]] = []
     for param in params:
         body_rows.append([param, *[""] * len(columns)])

@@ -63,7 +63,10 @@ def generate_summary(
     body_rows: list[list[str]] = []
     placeholder_footnote: str | None = None
 
-    if adeg is None or adeg.is_empty():
+    if cfg.shell_mode:
+        # Replaced with the static shell layout below — skip the aggregation.
+        pass
+    elif adeg is None or adeg.is_empty():
         # Issue 9 (audit): render the full shell structure with empty cells
         # so the layout matches the template, plus a footnote noting that no
         # ECG data was available for this study.

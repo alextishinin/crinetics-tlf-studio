@@ -54,9 +54,14 @@ def set_status(study_id: str, output_id: str, payload: StatusUpdate) -> dict:
     return {"status": outputs_service.set_status(study_id, output_id, payload.status)}
 
 
-@router.post("/{study_id}/outputs/package")
-def package(study_id: str) -> Response:
-    data, filename = outputs_service.package(study_id, approved_only=False)
+@router.get("/{study_id}/outputs/package")
+def package(study_id: str, approved_only: bool = False) -> Response:
+    """Zip the study's outputs for download.
+
+    GET (not POST) because the frontend triggers this from a plain link.
+    `approved_only=true` restricts the package to approved outputs.
+    """
+    data, filename = outputs_service.package(study_id, approved_only=approved_only)
     return Response(
         content=data,
         media_type="application/zip",

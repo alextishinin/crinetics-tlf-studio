@@ -11,16 +11,20 @@ on demand.
 from __future__ import annotations
 
 import json
+import os
+import time
 import traceback
 import uuid
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, Iterator
 
 from config import get_settings
 from models.job import JobRecord, JobStatus
 from services import study_service
-from services.tlf_runtime import configure_for_study
+from services.shell_ids import table_number as _shell_table_number
+from services.tlf_runtime import TLF_LOCK, configure_for_study
 
 
 JOBS_FILE = "jobs.json"
@@ -43,6 +47,7 @@ def _dispatchers() -> dict[str, Callable[..., Any]]:
         ecg,
         exposure,
         labs,
+        supplemental,
         vitals,
     )
     from tlf.figures import safety
@@ -51,12 +56,19 @@ def _dispatchers() -> dict[str, Callable[..., Any]]:
         # Disposition / demographics / exposure
         "t_14_1_1_1":           lambda cfg, reg, **k: disposition.generate(cfg, reg, **k),
         "t_14_1_1_2":           lambda cfg, reg, **k: disposition.generate_randomization_by_country(cfg, reg, **k),
+        "t_14_1_1_3":           lambda cfg, reg, **k: disposition.generate_analysis_sets(cfg, reg, **k),
+        "t_14_1_1_4":           lambda cfg, reg, **k: supplemental.generate_protocol_deviations(cfg, reg, **k),
         "t_14_1_2_1":           lambda cfg, reg, **k: baseline.generate(cfg, reg, **k),
+        "t_14_1_2_2":           lambda cfg, reg, **k: adverse_events.generate_medical_history(cfg, reg, **k),
+        "t_14_1_2_3":           lambda cfg, reg, **k: supplemental.generate_prior_medications(cfg, reg, **k),
+        "t_14_1_2_4":           lambda cfg, reg, **k: supplemental.generate_concomitant_medications(cfg, reg, **k),
         "t_14_1_3_1":           lambda cfg, reg, **k: exposure.generate(cfg, reg, **k),
         "t_14_1_3_2":           lambda cfg, reg, **k: exposure.generate_compliance(cfg, reg, **k),
         # Adverse events
         "t_14_3_1_1":           lambda cfg, reg, **k: adverse_events.generate_overview(cfg, reg, **k),
         "t_14_3_1_2":           lambda cfg, reg, **k: adverse_events.generate_soc_pt(cfg, reg, shell_id="t_14_3_1_2", **k),
+        "t_14_3_1_3":           lambda cfg, reg, **k: adverse_events.generate_soc_pt(cfg, reg, shell_id="t_14_3_1_3", **k),
+        "t_14_3_1_4":           lambda cfg, reg, **k: adverse_events.generate_soc_pt(cfg, reg, shell_id="t_14_3_1_4", **k),
         "t_14_3_1_5":           lambda cfg, reg, **k: adverse_events.generate_soc_pt(cfg, reg, shell_id="t_14_3_1_5", **k),
         "t_14_3_1_6":           lambda cfg, reg, **k: adverse_events.generate_soc_pt(cfg, reg, shell_id="t_14_3_1_6", **k),
         "t_14_3_1_7":           lambda cfg, reg, **k: adverse_events.generate_soc_pt(cfg, reg, shell_id="t_14_3_1_7", **k),
@@ -99,6 +111,40 @@ def _jobs_path(study_id: str) -> Path:
     return study_service.study_dir(study_id) / JOBS_FILE
 
 
+@contextmanager
+def _jobs_lock(study_id: str, timeout_s: float = 10.0) -> Iterator[None]:
+    """Cross-process lock around jobs.json read-modify-write cycles.
+
+    The API process and a Celery worker (or a background generation thread)
+    can both update job records; without this, two concurrent updates clobber
+    each other. Uses an O_EXCL lock file so it works across processes on any
+    platform without extra dependencies. A lock older than `timeout_s` is
+    treated as stale (left behind by a killed process) and stolen.
+    """
+    lock_path = _jobs_path(study_id).with_suffix(".json.lock")
+    deadline = time.monotonic() + timeout_s
+    while True:
+        try:
+            fd = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            break
+        except FileExistsError:
+            if time.monotonic() >= deadline:
+                try:
+                    lock_path.unlink()
+                except OSError:
+                    pass
+                deadline = time.monotonic() + timeout_s
+            time.sleep(0.05)
+    try:
+        yield
+    finally:
+        os.close(fd)
+        try:
+            lock_path.unlink()
+        except OSError:
+            pass
+
+
 def _read_jobs(study_id: str) -> list[dict[str, Any]]:
     path = _jobs_path(study_id)
     if not path.exists():
@@ -110,7 +156,11 @@ def _read_jobs(study_id: str) -> list[dict[str, Any]]:
 
 
 def _write_jobs(study_id: str, jobs: list[dict[str, Any]]) -> None:
-    _jobs_path(study_id).write_text(json.dumps(jobs, indent=2, default=str))
+    """Atomic write (temp file + replace) so a crash never truncates jobs.json."""
+    path = _jobs_path(study_id)
+    tmp = path.with_suffix(".json.tmp")
+    tmp.write_text(json.dumps(jobs, indent=2, default=str))
+    os.replace(tmp, path)
 
 
 def submit(study_id: str, table_ids: list[str], *, triggered_by: str = "user") -> list[JobRecord]:
@@ -125,7 +175,7 @@ def submit(study_id: str, table_ids: list[str], *, triggered_by: str = "user") -
             job_id=str(uuid.uuid4()),
             study_id=study_id,
             table_id=table_id,
-            table_number=table_id.replace("t_", "").replace("f_", "").replace("_", "."),
+            table_number=_shell_table_number(table_id),
             status=JobStatus.QUEUED,
             submitted_at=now,
             triggered_by=triggered_by,
@@ -133,9 +183,10 @@ def submit(study_id: str, table_ids: list[str], *, triggered_by: str = "user") -
         )
         records.append(rec)
     # Append to jobs.json
-    existing = _read_jobs(study_id)
-    existing.extend([r.model_dump(mode="json") for r in records])
-    _write_jobs(study_id, existing)
+    with _jobs_lock(study_id):
+        existing = _read_jobs(study_id)
+        existing.extend([r.model_dump(mode="json") for r in records])
+        _write_jobs(study_id, existing)
     return records
 
 
@@ -151,16 +202,17 @@ def get_job(study_id: str, job_id: str) -> JobRecord:
 
 
 def update_job(study_id: str, job_id: str, **patch: Any) -> JobRecord:
-    jobs = _read_jobs(study_id)
-    found = None
-    for r in jobs:
-        if r.get("job_id") == job_id:
-            r.update({k: (v if not isinstance(v, datetime) else v.isoformat()) for k, v in patch.items()})
-            found = r
-            break
-    if found is None:
-        raise KeyError(f"Job {job_id} not found")
-    _write_jobs(study_id, jobs)
+    with _jobs_lock(study_id):
+        jobs = _read_jobs(study_id)
+        found = None
+        for r in jobs:
+            if r.get("job_id") == job_id:
+                r.update({k: (v if not isinstance(v, datetime) else v.isoformat()) for k, v in patch.items()})
+                found = r
+                break
+        if found is None:
+            raise KeyError(f"Job {job_id} not found")
+        _write_jobs(study_id, jobs)
     return JobRecord.model_validate(found)
 
 
@@ -198,6 +250,21 @@ def run_inline(study_id: str, job_id: str) -> JobRecord:
         )
 
 
+def run_batch(study_id: str, job_ids: list[str]) -> None:
+    """Run a list of jobs sequentially. Used by the 'background' executor —
+    runs on a worker thread so job submission returns immediately and the
+    frontend's polling shows live per-job progress. run_inline captures any
+    failure on the job record, so one bad table never aborts the batch."""
+    for job_id in job_ids:
+        try:
+            record = get_job(study_id, job_id)
+        except (KeyError, FileNotFoundError):
+            continue  # study deleted mid-batch
+        if record.status == JobStatus.CANCELLED:
+            continue
+        run_inline(study_id, job_id)
+
+
 def generate_file(study_id: str, table_id: str) -> Path:
     """Generate a single shell's output file on demand and return its path.
 
@@ -216,11 +283,12 @@ def _do_generate(study_id: str, table_id: str) -> Path:
     settings = get_settings()
     registry = load_shell_registry(settings.tlf_registry_path)
 
-    # Point the cfg at this study's data / outputs and recompute shell_mode
-    # after those paths are known.
-    configure_for_study(cfg, sdir)
-
     dispatch = _dispatchers()
     if table_id not in dispatch:
         raise ValueError(f"Unknown table id: {table_id}")
-    return Path(dispatch[table_id](cfg, registry))
+
+    # The tlf library carries process-global state (validator shell mode), so
+    # configure_for_study + generation must run as one critical section.
+    with TLF_LOCK:
+        configure_for_study(cfg, sdir)
+        return Path(dispatch[table_id](cfg, registry))

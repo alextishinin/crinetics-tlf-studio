@@ -137,7 +137,12 @@ def _render_continuous(
     arms = _arms(cfg, columns)
     has_chg = "CHG" in lab.columns
     has_ablfl = "ABLFL" in lab.columns
-    params = sorted(lab.select("PARAM").drop_nulls().unique().to_series().to_list())
+    # Shell mode replaces the body with the static layout below — skip the
+    # per-parameter aggregation entirely rather than computing and discarding.
+    if cfg.shell_mode:
+        params: list[str] = []
+    else:
+        params = sorted(lab.select("PARAM").drop_nulls().unique().to_series().to_list())
     body_rows: list[list[str]] = []
     for param in params:
         body_rows.append([param, *[""] * len(columns)])
@@ -227,7 +232,11 @@ def _render_abnormality(
 
     arms = _arms(cfg, columns)
     arm_denoms = {a: denoms.get(a, 0) for a in arms}
-    params = sorted(lab.select("PARAM").drop_nulls().unique().to_series().to_list())
+    # Shell mode: skip the aggregation; the body is replaced below.
+    if cfg.shell_mode:
+        params: list[str] = []
+    else:
+        params = sorted(lab.select("PARAM").drop_nulls().unique().to_series().to_list())
 
     body_rows: list[list[str]] = []
     _anrind_display = {"N": "Normal", "L": "Low", "H": "High", "Missing": "Missing"}
@@ -312,7 +321,8 @@ def _render_thresholds(
     arm_denoms = {a: denoms.get(a, 0) for a in arms}
 
     body_rows: list[list[str]] = []
-    for paramcd in sorted(thresholds.keys()):
+    # Shell mode: skip the aggregation; the body is replaced below.
+    for paramcd in ([] if cfg.shell_mode else sorted(thresholds.keys())):
         sub = lab.filter(pl.col("PARAMCD") == paramcd)
         if sub.is_empty():
             continue

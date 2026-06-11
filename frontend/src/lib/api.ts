@@ -160,8 +160,8 @@ export const outputs = {
     ),
   downloadUrl: (studyId: string, outputId: string) =>
     `${API_BASE_URL}/api/studies/${studyId}/outputs/${outputId}/download`,
-  packageUrl: (studyId: string) =>
-    `${API_BASE_URL}/api/studies/${studyId}/outputs/package`,
+  packageUrl: (studyId: string, approvedOnly = false) =>
+    `${API_BASE_URL}/api/studies/${studyId}/outputs/package?approved_only=${approvedOnly}`,
   audit: (studyId: string, outputId: string) =>
     http<Record<string, unknown>>(
       `/api/studies/${studyId}/outputs/${outputId}/audit`,

@@ -34,6 +34,8 @@ SHELL_ID = "t_14_1_1_1"
 TABLE_NUMBER = "14.1.1.1"
 RANDOMIZATION_SHELL_ID = "t_14_1_1_2"
 RANDOMIZATION_TABLE_NUMBER = "14.1.1.2"
+ANALYSIS_SETS_SHELL_ID = "t_14_1_1_3"
+ANALYSIS_SETS_TABLE_NUMBER = "14.1.1.3"
 
 
 def generate(
@@ -120,6 +122,52 @@ def generate_randomization_by_country(
     return render_table(spec, cfg=cfg, output_path=path, run_dt=run_dt)
 
 
+def generate_analysis_sets(
+    cfg: StudyConfig,
+    registry: ShellRegistry,
+    *,
+    out_dir: Path | None = None,
+    run_dt: datetime | None = None,
+) -> Path:
+    """Table 14.1.1.3 — Analysis Set membership / exclusion counts from ADSL."""
+    shell = registry.shell(ANALYSIS_SETS_SHELL_ID)
+    columns = resolve_columns(cfg, registry, shell["column_layout"])
+    adsl = load_domains(cfg, shell["adam_domains"])["adsl"]
+    denominators = column_denominators(cfg, columns, adsl=adsl, analysis_set="ALL")
+    headers, n_labels = build_column_headers(cfg, columns, denominators, label_header="")
+
+    if cfg.shell_mode:
+        body_rows = shell_layouts.analysis_sets(columns)
+    else:
+        body_rows = [
+            _row("Safety Analysis Set (SAF)",
+                 _n_pct_by_flag(adsl, "SAFFL", "Y", columns, denominators)),
+            _row("Not Included in the SAF",
+                 _n_pct_by_derived(adsl, lambda df: _not_flag(df, "SAFFL"), columns, denominators)),
+            _row("Intent-To-Treat Set (ITT)",
+                 _n_pct_by_flag(adsl, "ITTFL", "Y", columns, denominators)),
+            _row("Not Included in the ITT",
+                 _n_pct_by_derived(adsl, lambda df: _not_flag(df, "ITTFL"), columns, denominators)),
+        ]
+
+    footnotes = render_footnotes(shell.get("footnotes", []), context=cfg.footnote_context())
+    spec = TableSpec(
+        shell_id=ANALYSIS_SETS_SHELL_ID,
+        title=(shell["title_line1"], shell["title_line2"], shell["title_line3"]),
+        column_headers=headers,
+        arm_n_labels=n_labels,
+        body_rows=body_rows,
+        footnotes=footnotes,
+    )
+    path = resolve_output_path(cfg, ANALYSIS_SETS_TABLE_NUMBER, out_dir=out_dir, run_dt=run_dt)
+    return render_table(spec, cfg=cfg, output_path=path, run_dt=run_dt)
+
+
+def _not_flag(df: pl.DataFrame, var: str) -> pl.DataFrame:
+    """Subjects NOT in a flagged set: flag missing or anything other than 'Y'."""
+    return df.filter(pl.col(var).fill_null("") != "Y")
+
+
 # ---------------------------------------------------------------------------
 # Body assembly: shell-template layout vs real-data layout
 # ---------------------------------------------------------------------------
@@ -153,7 +201,7 @@ def _real_data_rows(
 
     rows.append(_row(
         label="Completed Study Treatment",
-        cells=_n_pct_by_flag(adsl, "COMP24FL", "Y", columns, denominators),
+        cells=_n_pct_by_derived(adsl, _completed_treatment_mask, columns, denominators),
     ))
     rows.append(_row(
         label="Ongoing Treatment",
@@ -172,7 +220,7 @@ def _real_data_rows(
     rows.append(list(blank_row))
     rows.append(_row(
         label="Completed Study",
-        cells=_n_pct_by_flag(adsl, "COMP24FL", "Y", columns, denominators),
+        cells=_n_pct_by_derived(adsl, _completed_study_mask, columns, denominators),
     ))
     rows.append(_row(
         label="Ongoing in the Study",
@@ -349,6 +397,30 @@ def _disc_reasons(
 # ---------------------------------------------------------------------------
 # Ongoing Treatment / Study masks (Issues 5 & 6)
 # ---------------------------------------------------------------------------
+
+def _completed_treatment_mask(adsl: pl.DataFrame) -> pl.DataFrame:
+    """Subjects who completed study treatment.
+
+    Uses the end-of-treatment status (EOTSTT='COMPLETED') when the study's
+    ADSL carries it. CDISCPILOT01 has no EOTSTT/EOSSTT, so we fall back to
+    COMP24FL (week-24 completion == treatment completion in that study).
+    """
+    if "EOTSTT" in adsl.columns:
+        return adsl.filter(pl.col("EOTSTT").fill_null("").str.to_uppercase() == "COMPLETED")
+    return adsl.filter(pl.col("COMP24FL").fill_null("") == "Y")
+
+
+def _completed_study_mask(adsl: pl.DataFrame) -> pl.DataFrame:
+    """Subjects who completed the study (distinct from treatment completion).
+
+    Uses end-of-study status (EOSSTT='COMPLETED') when present; falls back to
+    COMP24FL for studies like CDISCPILOT01 where the final visit (week 24)
+    defines study completion.
+    """
+    if "EOSSTT" in adsl.columns:
+        return adsl.filter(pl.col("EOSSTT").fill_null("").str.to_uppercase() == "COMPLETED")
+    return adsl.filter(pl.col("COMP24FL").fill_null("") == "Y")
+
 
 def _ongoing_treatment_mask(adsl: pl.DataFrame) -> pl.DataFrame:
     """Subjects still on treatment: neither completed nor early-discontinued."""

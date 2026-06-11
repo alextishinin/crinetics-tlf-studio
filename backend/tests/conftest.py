@@ -28,6 +28,9 @@ def _env(tmp_path, monkeypatch) -> Iterator[Path]:
     monkeypatch.setenv("STUDIES_ROOT", str(studies))
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
     monkeypatch.setenv("REDIS_URL", "redis://localhost:6379/0")
+    # Tests assert on final job states in the submit response, so run jobs
+    # synchronously rather than on the background worker thread.
+    monkeypatch.setenv("TLF_JOB_EXECUTOR", "inline")
     # Point at the real automation project if present, else a tmp stub.
     repo_root = BACKEND_ROOT.parent.parent
     automation = repo_root / "crinetics-tlf-automation"

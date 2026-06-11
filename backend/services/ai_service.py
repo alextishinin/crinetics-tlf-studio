@@ -54,8 +54,13 @@ def _strip_fence(text: str) -> str:
     return text.strip()
 
 
-def _completion(system: str, user: str, *, max_tokens: int = 4096) -> str:
-    """Single-shot completion. Falls back to empty string on transport error."""
+def _completion(system: str, user: str, *, max_tokens: int = 4096) -> tuple[str, str | None]:
+    """Single-shot completion. Returns (text, error_message).
+
+    Failures are returned as a human-readable error instead of being
+    swallowed — an invalid key, a rate limit, and a network outage are
+    different problems and the UI should say which one happened.
+    """
     try:
         msg = _client().messages.create(
             model=_model(),
@@ -63,9 +68,18 @@ def _completion(system: str, user: str, *, max_tokens: int = 4096) -> str:
             system=system,
             messages=[{"role": "user", "content": user}],
         )
-        return "".join(getattr(p, "text", "") for p in msg.content)
-    except Exception:
-        return ""
+        return "".join(getattr(p, "text", "") for p in msg.content), None
+    except anthropic.AuthenticationError:
+        return "", "The Anthropic API key was rejected — check it in Settings."
+    except anthropic.RateLimitError:
+        return "", "Rate limited by the Anthropic API — try again in a moment."
+    except anthropic.APIConnectionError:
+        return "", "Could not reach the Anthropic API — check your network connection."
+    except anthropic.APIStatusError as exc:
+        kind = getattr(exc, "type", None) or getattr(exc, "status_code", "unknown")
+        return "", f"Anthropic API error ({kind})."
+    except Exception as exc:  # noqa: BLE001 — last-resort catch keeps the UI alive
+        return "", f"AI request failed: {type(exc).__name__}."
 
 
 # ---------------------------------------------------------------------------
@@ -103,10 +117,11 @@ Rules:
 
 
 def extract_sap(pdf_text: str) -> SapExtractionResponse:
-    raw = _completion(_SAP_SYSTEM, pdf_text[:50_000])
+    raw, err = _completion(_SAP_SYSTEM, pdf_text[:50_000])
     if not raw:
         return SapExtractionResponse(
-            sap_definitions={}, optional_outputs=[], error="Empty response from AI",
+            sap_definitions={}, optional_outputs=[],
+            error=err or "Empty response from AI",
         )
     payload = _strip_fence(raw)
     try:
@@ -176,9 +191,9 @@ Rules:
 
 
 def extract_protocol(text: str) -> ProtocolExtractionResponse:
-    raw = _completion(_PROTOCOL_SYSTEM, text[:50_000])
+    raw, err = _completion(_PROTOCOL_SYSTEM, text[:50_000])
     if not raw:
-        return ProtocolExtractionResponse(error="Empty response from AI")
+        return ProtocolExtractionResponse(error=err or "Empty response from AI")
     payload = _strip_fence(raw)
     try:
         data = json.loads(payload)
@@ -230,9 +245,9 @@ Rules:
 
 
 def extract_crf(text: str) -> CrfExtractionResponse:
-    raw = _completion(_CRF_SYSTEM, text[:50_000])
+    raw, err = _completion(_CRF_SYSTEM, text[:50_000])
     if not raw:
-        return CrfExtractionResponse(error="Empty response from AI")
+        return CrfExtractionResponse(error=err or "Empty response from AI")
     payload = _strip_fence(raw)
     try:
         data = json.loads(payload)
@@ -299,9 +314,9 @@ def interpret_shell_instruction(
         f"Currently selected: {current}\n\n"
         f"Available shells:\n{shell_catalog}"
     )
-    raw = _completion(_NL_SHELLS_SYSTEM, user)
+    raw, err = _completion(_NL_SHELLS_SYSTEM, user)
     if not raw:
-        return NlShellResponse(changes=[], error="Empty AI response")
+        return NlShellResponse(changes=[], error=err or "Empty AI response")
     payload = _strip_fence(raw)
     try:
         data = json.loads(payload)
@@ -539,7 +554,9 @@ def _rule_based_anomalies(preview: dict[str, Any]) -> Iterator[Anomaly]:
         if abbrev.lower() not in footnote_text.lower():
             # Only flag truly clinical abbreviations — skip ones that are
             # also common English words by length / known list heuristic.
-            if abbrev in {"SOC", "PT", "TEAE", "AE", "AESI", "SAE", "SAR", "MedDRA", "MMSE", "BMI", "QTC"}:
+            # (List entries must be ALL-CAPS to ever match the regex above;
+            # mixed-case terms like "MedDRA" are handled by check #4.)
+            if abbrev in {"SOC", "PT", "TEAE", "AE", "AESI", "SAE", "SAR", "MMSE", "BMI", "QTC"}:
                 yield Anomaly(
                     severity="info",
                     description=f"Abbreviation '{abbrev}' appears in the table body but is not defined in any footnote",
@@ -571,8 +588,10 @@ column headers, body rows, and footnotes, return ONLY a JSON array of
 anomaly objects with fields: severity ("warning"|"info"), description,
 location, rule. Return [] if you find none."""
     user = json.dumps(preview)[:8000]
-    raw = _completion(system, user, max_tokens=1024)
+    raw, _err = _completion(system, user, max_tokens=1024)
     if not raw:
+        # AI augmentation is best-effort; the deterministic findings already
+        # returned stand on their own.
         return []
     payload = _strip_fence(raw)
     try:

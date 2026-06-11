@@ -6,9 +6,33 @@ title_line2: Summary of Grade >=3 Treatment-Emergent Adverse Events by System Or
 title_line3: Safety Analysis Set
 adam_domains:
 - adae
+- adsl
 analysis_set: SAF
 column_layout: safety_with_total
+base_filter:
+  TRTEMFL: Y
+  AETOXGR_gte: 3
+row_schema:
+- label: Subjects with at Least One Grade >=3 Treatment-Emergent Adverse Event
+  kind: n_pct
+- label: '{soc}'
+  kind: n_pct
+  level: 0
+  group_by: AEBODSYS
+- label: '{pt}'
+  kind: n_pct
+  level: 1
+  group_by: AEDECOD
+sort: Total descending by SOC, then PT within SOC
+footnotes:
+- teae = treatment-emergent adverse event, soc = system organ class, pt = preferred
+  term.
+- MedDRA Version {{ meddra_version }}.
+- An AE is considered TEAE if {{ teae_definition }}
+- Severity is graded per CTCAE; this table includes events with grade >=3 only.
 conditionality: optional
 optional_flag: table_14_3_1_3_grade3_aes
 programming_notes:
-- Disabled for this study — CTCAE grading not used. Severity is MILD/MODERATE/SEVERE.
+- Disabled for this study - CTCAE grading not used. Severity is MILD/MODERATE/SEVERE.
+- Requires AETOXGR in ADAE. When the column is absent the AETOXGR_gte filter matches
+  no rows and the table renders with zero counts.

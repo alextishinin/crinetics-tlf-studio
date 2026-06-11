@@ -68,29 +68,40 @@ def generate_ae_forest(
     out_dir: Path | None = None,
     run_dt: datetime | None = None,
 ) -> Path:
-    """Figure 14.3.1.1 — TEAE risk-difference forest (drug vs placebo)."""
+    """Figure 14.3.1.1 — TEAE risk-difference forest (pooled active vs placebo).
+
+    Arms and denominators come from the study config + ADSL rather than
+    hard-coded CDISCPILOT01 codes: placebo = arms with TRTPN 0 or no target
+    daily dose; active = every other arm; Ns = SAFFL='Y' counts per arm.
+    """
     shell = registry.shell("f_14_3_1_1")
     adae = read_adam("adae", cfg.adam_path).collect()
     adsl = read_adam("adsl", cfg.adam_path).collect()
     df = adae.filter(pl.col("TRTEMFL") == "Y")
 
-    saf_n = cfg.analysis_sets["SAF"].n
-    placebo_n = saf_n[0] or 1
+    placebo_trtpns = [
+        a.trtpn for a in cfg.treatment_arms
+        if a.trtpn == 0 or a.target_daily_dose_mg is None
+    ]
+    active_trtpns = [a.trtpn for a in cfg.treatment_arms if a.trtpn not in placebo_trtpns]
+
+    saf = adsl.filter(pl.col("SAFFL") == "Y") if "SAFFL" in adsl.columns else adsl
+    placebo_n = saf.filter(pl.col("TRT01PN").is_in(placebo_trtpns)).height
+    active_n = saf.filter(pl.col("TRT01PN").is_in(active_trtpns)).height
+
     placebo_subj = (
-        df.filter(pl.col("TRTAN") == 0)
+        df.filter(pl.col("TRTAN").is_in(placebo_trtpns))
           .select(["USUBJID", "AEBODSYS"]).drop_nulls().unique()
     )
     placebo_pct = (
         placebo_subj.group_by("AEBODSYS").agg(pl.len().alias("n"))
-        .with_columns((pl.col("n") / placebo_n).alias("p_pbo"))
+        .with_columns((pl.col("n") / max(placebo_n, 1)).alias("p_pbo"))
     )
 
-    # Active = Low + High pooled
     active_subj = (
-        df.filter(pl.col("TRTAN").is_in([54, 81]))
+        df.filter(pl.col("TRTAN").is_in(active_trtpns))
           .select(["USUBJID", "AEBODSYS"]).drop_nulls().unique()
     )
-    active_n = (saf_n[54] or 0) + (saf_n[81] or 0)
     active_pct = (
         active_subj.group_by("AEBODSYS").agg(pl.len().alias("n"))
         .with_columns((pl.col("n") / max(active_n, 1)).alias("p_active"))

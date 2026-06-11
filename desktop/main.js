@@ -31,6 +31,42 @@ let frontendProc = null;
 let mainWindow = null;
 let shuttingDown = false;
 
+// GET a URL and resolve with { ok, body } so we can tell "our backend is
+// already there" apart from "some other app owns the port".
+function fetchBody(url) {
+  return new Promise((resolve) => {
+    const req = http.get(url, (res) => {
+      let body = "";
+      res.on("data", (c) => (body += c));
+      res.on("end", () => resolve({ ok: (res.statusCode || 500) < 500, body }));
+    });
+    req.on("error", () => resolve({ ok: false, body: "" }));
+    req.setTimeout(2000, () => {
+      req.destroy();
+      resolve({ ok: false, body: "" });
+    });
+  });
+}
+
+// The frontend bakes http://localhost:8000 in at build time, so the backend
+// port is not negotiable. If something else already owns it, starting our
+// sidecar would silently talk to the wrong server — fail with a clear
+// message instead.
+async function portConflict() {
+  const { ok, body } = await fetchBody(`http://${HOST}:${BACKEND_PORT}/health`);
+  if (!ok) return null; // port free (or unresponsive — startup will retry)
+  if (body.includes("tlf-studio")) {
+    return (
+      `TLF Studio's data engine is already running on port ${BACKEND_PORT} ` +
+      "(another copy of the app, or a dev server). Close it and press Retry."
+    );
+  }
+  return (
+    `Another application is using port ${BACKEND_PORT}, which TLF Studio needs. ` +
+    "Close it and press Retry."
+  );
+}
+
 // --- resource locations ----------------------------------------------------
 function resolvePaths() {
   if (isDev) {
@@ -198,6 +234,12 @@ async function startServices() {
   frontendProc = null;
   shuttingDown = false;
 
+  const conflict = await portConflict();
+  if (conflict) {
+    showStatus(conflict, true);
+    return;
+  }
+
   let paths;
   try {
     paths = resolvePaths();
@@ -281,7 +323,15 @@ function killSidecars() {
   for (const proc of [backendProc, frontendProc]) {
     if (proc && !proc.killed) {
       try {
-        proc.kill();
+        if (process.platform === "win32") {
+          // proc.kill() only signals the immediate child on Windows; the
+          // frozen backend's own children (e.g. a hung WINWORD.EXE during a
+          // PDF export) would survive and hold file locks. /T takes the tree.
+          const { execSync } = require("child_process");
+          execSync(`taskkill /PID ${proc.pid} /T /F`, { stdio: "ignore" });
+        } else {
+          proc.kill();
+        }
       } catch (_) {
         /* ignore */
       }

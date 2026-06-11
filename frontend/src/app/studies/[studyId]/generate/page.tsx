@@ -1,7 +1,7 @@
 "use client";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { PlayCircle, X } from "lucide-react";
+import { AlertCircle, ChevronDown, ChevronRight, PlayCircle, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +12,7 @@ import { JobStatusBadge } from "@/components/generation/JobStatusBadge";
 import { useShells } from "@/hooks/useShells";
 import { useCancelJob, useJobs, useSubmitJobs } from "@/hooks/useJobs";
 import { formatTimestamp } from "@/lib/utils";
+import type { JobRecord } from "@/types/job";
 
 export default function GeneratePage() {
   const params = useParams<{ studyId: string }>();
@@ -48,9 +49,21 @@ export default function GeneratePage() {
 
   const recentJobs = (jobs ?? []).slice().sort((a, b) => (a.submitted_at < b.submitted_at ? 1 : -1));
   const running = recentJobs.filter((j) => j.status === "queued" || j.status === "running");
-  const complete = recentJobs.filter((j) => j.status === "complete").length;
-  const total = recentJobs.length;
-  const progress = total === 0 ? 0 : Math.round((complete / total) * 100);
+
+  // Progress is scoped to the most recent batch — measuring across the whole
+  // job history made the bar meaningless after a couple of runs.
+  const latestBatch = useMemo(() => {
+    if (recentJobs.length === 0) return [] as JobRecord[];
+    const newest = recentJobs[0];
+    if (newest.batch_id) return recentJobs.filter((j) => j.batch_id === newest.batch_id);
+    return [newest];
+  }, [recentJobs]);
+  const batchDone = latestBatch.filter(
+    (j) => j.status === "complete" || j.status === "failed" || j.status === "cancelled",
+  ).length;
+  const batchFailed = latestBatch.filter((j) => j.status === "failed").length;
+  const batchActive = latestBatch.some((j) => j.status === "queued" || j.status === "running");
+  const progress = latestBatch.length === 0 ? 0 : Math.round((batchDone / latestBatch.length) * 100);
 
   return (
     <div className="flex min-h-full flex-col">
@@ -59,7 +72,8 @@ export default function GeneratePage() {
         sticky
         action={
           <Button onClick={handleGenerate} disabled={submit.isPending}>
-            <PlayCircle className="h-4 w-4" /> Generate Selected
+            <PlayCircle className="h-4 w-4" />
+            {submit.isPending ? "Submitting…" : "Generate Selected"}
           </Button>
         }
       />
@@ -101,27 +115,30 @@ export default function GeneratePage() {
               </p>
             )}
             {selectableShells.map((s) => (
-              <div key={s.id} className="flex items-center gap-3 rounded-md border p-2">
+              <label key={s.id} className="flex cursor-pointer items-center gap-3 rounded-md border p-2">
                 <Checkbox
                   checked={!!batchSel[s.id]}
                   onCheckedChange={(c) => setBatchSel((x) => ({ ...x, [s.id]: !!c }))}
+                  aria-label={`Include ${s.number} in the batch`}
                 />
                 <div className="flex-1 text-sm">
                   <span className="font-mono text-slate-500 mr-2">{s.number}</span>
                   {s.title}
                 </div>
-              </div>
+              </label>
             ))}
           </CardContent>
         </Card>
 
-        {total > 0 && (
+        {latestBatch.length > 0 && (batchActive || batchDone > 0) && (
           <Card>
-            <CardHeader><CardTitle className="text-base">Progress</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-base">Latest Batch</CardTitle></CardHeader>
             <CardContent>
               <Progress value={progress} />
               <div className="mt-2 text-xs text-slate-500">
-                {complete} of {total} complete · {running.length} running
+                {batchDone} of {latestBatch.length} finished
+                {batchFailed > 0 && <span className="text-rose-600"> · {batchFailed} failed</span>}
+                {batchActive && <span> · {running.length} in progress</span>}
               </div>
             </CardContent>
           </Card>
@@ -145,28 +162,12 @@ export default function GeneratePage() {
                   <tr><td colSpan={5} className="p-3 text-center text-slate-500">No jobs yet.</td></tr>
                 )}
                 {recentJobs.map((j) => (
-                  <tr key={j.job_id} className="border-b">
-                    <td className="p-2 text-xs text-slate-500">{formatTimestamp(j.submitted_at)}</td>
-                    <td className="p-2 font-mono">{j.table_id}</td>
-                    <td className="p-2"><JobStatusBadge status={j.status} /></td>
-                    <td className="p-2 text-xs text-slate-500">
-                      {j.started_at && j.completed_at
-                        ? `${Math.round((new Date(j.completed_at).getTime() - new Date(j.started_at).getTime()) / 1000)}s`
-                        : "—"}
-                    </td>
-                    <td className="p-2 text-right">
-                      {(j.status === "queued" || j.status === "running") && (
-                        <Button size="sm" variant="ghost" onClick={() => cancel.mutate(j.job_id)}>
-                          <X className="h-3.5 w-3.5" />
-                        </Button>
-                      )}
-                      {j.status === "failed" && (
-                        <Button size="sm" variant="outline" onClick={() => submit.mutate([j.table_id])}>
-                          Retry
-                        </Button>
-                      )}
-                    </td>
-                  </tr>
+                  <JobRow
+                    key={j.job_id}
+                    job={j}
+                    onDismiss={() => cancel.mutate(j.job_id)}
+                    onRetry={() => submit.mutate([j.table_id])}
+                  />
                 ))}
               </tbody>
             </table>
@@ -174,5 +175,79 @@ export default function GeneratePage() {
         </Card>
       </div>
     </div>
+  );
+}
+
+function JobRow({
+  job,
+  onDismiss,
+  onRetry,
+}: {
+  job: JobRecord;
+  onDismiss: () => void;
+  onRetry: () => void;
+}) {
+  const [showError, setShowError] = useState(false);
+  const duration =
+    job.started_at && job.completed_at
+      ? `${Math.round((new Date(job.completed_at).getTime() - new Date(job.started_at).getTime()) / 1000)}s`
+      : "—";
+  // First line of the captured error, without the traceback noise.
+  const errorSummary = job.error ? job.error.split("\n")[0] : null;
+
+  return (
+    <>
+      <tr className="border-b">
+        <td className="p-2 text-xs text-slate-500">{formatTimestamp(job.submitted_at)}</td>
+        <td className="p-2">
+          <span className="font-mono text-xs text-slate-500 mr-2">{job.table_number}</span>
+          <span className="font-mono text-xs">{job.table_id}</span>
+        </td>
+        <td className="p-2"><JobStatusBadge status={job.status} /></td>
+        <td className="p-2 text-xs text-slate-500">{duration}</td>
+        <td className="p-2 text-right">
+          {(job.status === "queued" || job.status === "running") && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={onDismiss}
+              aria-label="Dismiss job"
+              title="Dismiss — a job already running is not interrupted"
+            >
+              <X className="h-3.5 w-3.5" />
+            </Button>
+          )}
+          {job.status === "failed" && (
+            <Button size="sm" variant="outline" onClick={onRetry}>
+              Retry
+            </Button>
+          )}
+        </td>
+      </tr>
+      {job.status === "failed" && errorSummary && (
+        <tr className="border-b bg-rose-50/60">
+          <td colSpan={5} className="px-2 pb-2 pt-1">
+            <button
+              className="flex w-full items-start gap-2 text-left text-xs text-rose-700"
+              onClick={() => setShowError((s) => !s)}
+              aria-expanded={showError}
+            >
+              {showError ? (
+                <ChevronDown className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+              ) : (
+                <ChevronRight className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+              )}
+              <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+              <span className="min-w-0 break-words">{errorSummary}</span>
+            </button>
+            {showError && (
+              <pre className="mt-2 max-h-64 overflow-auto rounded-md bg-white p-3 text-[11px] leading-snug text-slate-700 border">
+                {job.error}
+              </pre>
+            )}
+          </td>
+        </tr>
+      )}
+    </>
   );
 }

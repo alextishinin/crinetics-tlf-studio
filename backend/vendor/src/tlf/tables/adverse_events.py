@@ -41,8 +41,11 @@ from tlf.validator import format_n_pct, format_n_pct_m
 
 # Map shell id -> output table number.
 _NUMBER_BY_ID = {
+    "t_14_1_2_2": "14.1.2.2",
     "t_14_3_1_1": "14.3.1.1",
     "t_14_3_1_2": "14.3.1.2",
+    "t_14_3_1_3": "14.3.1.3",
+    "t_14_3_1_4": "14.3.1.4",
     "t_14_3_1_5": "14.3.1.5",
     "t_14_3_1_6": "14.3.1.6",
     "t_14_3_1_7": "14.3.1.7",
@@ -80,6 +83,57 @@ def generate_soc_pt(
     """SOC × PT incidence table. Used by 14.3.1.2 / .5 / .6 / .7 / .8."""
     shell = registry.shell(shell_id)
     return _render_soc_pt(shell, cfg, registry, out_dir, run_dt)
+
+
+def generate_medical_history(
+    cfg: StudyConfig,
+    registry: ShellRegistry,
+    *,
+    shell_id: str = "t_14_1_2_2",
+    out_dir: Path | None = None,
+    run_dt: datetime | None = None,
+) -> Path:
+    """Table 14.1.2.2 — Medical History (SOC × PT from pre-treatment ADAE rows).
+
+    Per the shell's programming notes, medical history is taken from ADAE rows
+    flagged AENTMTFL='Y'. The reference CDISCPILOT01 ADAE does not carry that
+    flag, so when the column is absent the table renders as an empty shell
+    with a footnote saying why, rather than silently counting TEAEs as
+    medical history.
+    """
+    shell = registry.shell(shell_id)
+    adsl_raw, adae = _load(cfg, shell)
+    if cfg.shell_mode or "AENTMTFL" in adae.columns:
+        return _render_soc_pt(
+            shell, cfg, registry, out_dir, run_dt,
+            shell_layout=shell_layouts.medical_history,
+        )
+
+    # Flag column absent — emit the shell structure with empty cells.
+    columns = resolve_columns(cfg, registry, shell["column_layout"])
+    denoms = _ae_denoms(cfg, columns, adsl_raw, shell["analysis_set"])
+    headers, n_labels = build_column_headers(
+        cfg, columns, denoms, label_header="System Organ Class / Preferred Term",
+    )
+    body_rows = [["Subjects with Any Medical History", *[""] * len(columns)]]
+    footnotes = render_footnotes(
+        list(shell.get("footnotes", []))
+        + [
+            "Medical history could not be summarised: the pre-treatment flag "
+            "AENTMTFL is not present in ADAE for this study."
+        ],
+        context=cfg.footnote_context(),
+    )
+    spec = TableSpec(
+        shell_id=shell["id"],
+        title=(shell["title_line1"], shell["title_line2"], shell["title_line3"]),
+        column_headers=headers,
+        arm_n_labels=n_labels,
+        body_rows=body_rows,
+        footnotes=footnotes,
+    )
+    path = resolve_output_path(cfg, _NUMBER_BY_ID[shell["id"]], out_dir=out_dir, run_dt=run_dt)
+    return render_table(spec, cfg=cfg, output_path=path, run_dt=run_dt)
 
 
 def generate_pt_only(
@@ -234,7 +288,11 @@ def _render_soc_pt(
     registry: ShellRegistry,
     out_dir: Path | None,
     run_dt: datetime | None,
+    *,
+    shell_layout=None,
 ) -> Path:
+    if shell_layout is None:
+        shell_layout = shell_layouts.ae_soc_pt
     columns = resolve_columns(cfg, registry, shell["column_layout"])
     adsl_raw, adae = _load(cfg, shell)
     arms = _ae_arms(cfg, columns)
@@ -267,7 +325,7 @@ def _render_soc_pt(
     if sub.is_empty():
         return _finalize(
             body_rows, shell, columns, headers, n_labels, cfg, out_dir, run_dt,
-            shell_layout=shell_layouts.ae_soc_pt,
+            shell_layout=shell_layout,
         )
 
     # SOC-level rows
@@ -321,7 +379,7 @@ def _render_soc_pt(
 
     return _finalize(
         body_rows, shell, columns, headers, n_labels, cfg, out_dir, run_dt,
-        shell_layout=shell_layouts.ae_soc_pt,
+        shell_layout=shell_layout,
     )
 
 
@@ -617,15 +675,19 @@ def _sorted_groups(
     *,
     restrict: list[str] | None = None,
 ) -> list[str]:
-    """Sort group keys by descending Total then Low → High → Placebo within
-    ties (using the SAP order: 54, 81, 0)."""
+    """Sort group keys by descending Total, then by per-arm counts within ties.
+
+    Tie-breaking walks the arms in the order they appear in `arms`, which is
+    the study-config column order (per the SAP, active arms first then
+    Placebo). This keeps the sort study-agnostic instead of hard-coding the
+    CDISCPILOT01 TRTPN codes.
+    """
     keys = list(counts.keys()) if restrict is None else [k for k in counts if k in restrict]
-    arm_order = [54, 81, 0]
     def key(g: str):
         return (
             g == "UNCODED",  # UNCODED always last
             -total_map.get(g, 0),
-            *(-counts.get(g, {}).get(a, 0) for a in arm_order if a in arms),
+            *(-counts.get(g, {}).get(a, 0) for a in arms),
             g,
         )
     return sorted(keys, key=key)

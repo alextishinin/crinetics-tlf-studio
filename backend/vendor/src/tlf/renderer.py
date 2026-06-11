@@ -39,7 +39,6 @@ from tlf.config import StudyConfig
 from tlf.footnotes import Footnote, assert_no_unresolved
 from tlf.validator import (
     ValidationError,
-    validate_column_count,
     validate_title_lines,
 )
 
@@ -361,7 +360,6 @@ def _validate(spec: TableSpec, cfg: StudyConfig) -> None:
             raise ValidationError(
                 f"Row {i} has {len(row)} cells, expected {ncol}"
             )
-    validate_column_count(spec.column_headers, ncol)
 
 
 def _rows_to_polars(headers: list[str], rows: list[list[str]]) -> pl.DataFrame:

@@ -71,6 +71,17 @@ class Settings(BaseSettings):
 
     api_base_url: str = "http://localhost:8000"
 
+    # How generation jobs run: "background" (worker thread; the default —
+    # submission returns immediately and the UI polls), "inline" (synchronous,
+    # used by the tests), or "celery" (Redis-backed worker).
+    tlf_job_executor: str = "background"
+
+    # Comma-separated list of origins allowed to call this API from a
+    # browser. The API is unauthenticated and holds study data, so it must
+    # NOT be wide open ("*") — any website the user has open could otherwise
+    # drive it via drive-by requests to localhost.
+    cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
+
 
 _settings: Settings | None = None
 

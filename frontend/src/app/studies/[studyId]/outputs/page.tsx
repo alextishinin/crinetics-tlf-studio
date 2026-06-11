@@ -1,7 +1,9 @@
 "use client";
+import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
-import { CheckCircle2, Download, Eye, FileText, Package } from "lucide-react";
+import { CheckCircle2, Download, Eye, FileText, Package, Undo2 } from "lucide-react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,14 +18,22 @@ export default function OutputsPage() {
   const params = useParams<{ studyId: string }>();
   const { data, refetch } = useOutputs(params.studyId);
   const [search, setSearch] = useState("");
+  const [approvedOnly, setApprovedOnly] = useState(false);
 
   const filtered = (data ?? []).filter((o) =>
     `${o.table_number} ${o.filename}`.toLowerCase().includes(search.toLowerCase()),
   );
+  const approvedCount = (data ?? []).filter((o) => o.status === "approved").length;
+  const packageEmpty = approvedOnly ? approvedCount === 0 : (data ?? []).length === 0;
 
-  const approve = async (outputId: string) => {
-    await outputs.setStatus(params.studyId, outputId, "approved");
-    refetch();
+  const setStatus = async (outputId: string, status: "approved" | "pending") => {
+    try {
+      await outputs.setStatus(params.studyId, outputId, status);
+      toast.success(status === "approved" ? "Output approved" : "Approval removed");
+      refetch();
+    } catch (err) {
+      toast.error(`Could not update status: ${err instanceof Error ? err.message : err}`);
+    }
   };
 
   return (
@@ -31,11 +41,27 @@ export default function OutputsPage() {
       <Header
         title="Outputs"
         action={
-          <Button asChild>
-            <a href={outputs.packageUrl(params.studyId)}>
-              <Package className="h-4 w-4" /> Download Package
-            </a>
-          </Button>
+          <div className="flex items-center gap-3">
+            <label className="flex items-center gap-1.5 text-xs text-slate-600">
+              <input
+                type="checkbox"
+                checked={approvedOnly}
+                onChange={(e) => setApprovedOnly(e.target.checked)}
+              />
+              Approved only ({approvedCount})
+            </label>
+            {packageEmpty ? (
+              <Button disabled title={approvedOnly ? "No approved outputs yet" : "No outputs yet"}>
+                <Package className="h-4 w-4" /> Download Package
+              </Button>
+            ) : (
+              <Button asChild>
+                <a href={outputs.packageUrl(params.studyId, approvedOnly)}>
+                  <Package className="h-4 w-4" /> Download Package
+                </a>
+              </Button>
+            )}
+          </div>
         }
       />
       <div className="p-6 space-y-4">
@@ -80,18 +106,42 @@ export default function OutputsPage() {
                     <td className="p-3"><StatusBadge status={o.status} /></td>
                     <td className="p-3 flex justify-end gap-1">
                       <Button asChild size="sm" variant="ghost">
-                        <a href={outputs.downloadUrl(params.studyId, o.output_id)}>
+                        <a
+                          href={outputs.downloadUrl(params.studyId, o.output_id)}
+                          aria-label={`Download ${o.filename}`}
+                          title="Download"
+                        >
                           <Download className="h-3.5 w-3.5" />
                         </a>
                       </Button>
                       <Button asChild size="sm" variant="ghost">
-                        <a href={`/studies/${params.studyId}/preview/${o.table_id}`}>
+                        <Link
+                          href={`/studies/${params.studyId}/preview/${o.table_id}`}
+                          aria-label={`Preview ${o.table_number}`}
+                          title="Preview"
+                        >
                           <Eye className="h-3.5 w-3.5" />
-                        </a>
+                        </Link>
                       </Button>
-                      {o.status !== "approved" && (
-                        <Button size="sm" variant="ghost" onClick={() => approve(o.output_id)}>
+                      {o.status !== "approved" ? (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setStatus(o.output_id, "approved")}
+                          aria-label={`Approve ${o.table_number}`}
+                          title="Approve"
+                        >
                           <CheckCircle2 className="h-3.5 w-3.5 text-emerald-700" />
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setStatus(o.output_id, "pending")}
+                          aria-label={`Remove approval from ${o.table_number}`}
+                          title="Remove approval"
+                        >
+                          <Undo2 className="h-3.5 w-3.5 text-slate-500" />
                         </Button>
                       )}
                     </td>

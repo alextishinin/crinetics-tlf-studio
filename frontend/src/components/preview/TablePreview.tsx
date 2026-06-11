@@ -4,8 +4,10 @@ import type { TablePreviewData } from "@/types/job";
 
 export function TablePreview({ data }: { data: TablePreviewData }) {
   // The first column is the row-label column; everything after is an arm.
+  // Monospace to match the real RTF output (Courier New) — a serif preview
+  // misrepresents the column alignment reviewers are checking.
   return (
-    <div className="rounded-md border bg-white p-6 font-serif text-sm">
+    <div className="rounded-md border bg-white p-6 font-mono text-sm">
       <div className="text-xs text-slate-500 mb-4">{data.header_text}</div>
 
       <div className="text-center mb-4 leading-tight">

@@ -8,6 +8,10 @@ footer_template: 'Source: {{ source }}
   v{{ sas_version }} {{ run_datetime }}    Page {{ page }} of {{ pages }}
 
   '
+# NOTE: column_layouts below are DOCUMENTATION ONLY. The pipeline derives
+# columns from study_config.treatment_arms (see tlf.tables._common.
+# resolve_columns) so it works for any arm codes; editing these entries has
+# no effect on generated output.
 column_layouts:
   safety_with_total:
   - id: low

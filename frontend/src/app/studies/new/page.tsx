@@ -100,6 +100,19 @@ export default function NewStudyPage() {
     return created.meta.study_id;
   };
 
+  // Studies can be configured before any ADaM data exists — the pipeline's
+  // shell mode renders every output with placeholder "xx" values, which is
+  // exactly what teams need while shells are being reviewed.
+  const handleSkipData = async () => {
+    setUploadError(null);
+    try {
+      await ensureStudy();
+      setStep(2);
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : String(err));
+    }
+  };
+
   const handleUpload = async () => {
     if (files.length === 0) return;
     setUploadError(null);
@@ -167,7 +180,7 @@ export default function NewStudyPage() {
                   step === s.id
                     ? "bg-primary text-primary-foreground"
                     : step > s.id
-                      ? "bg-emerald-100 text-emerald-700"
+                      ? "bg-crinetics-tealLight text-primary"
                       : "bg-slate-200 text-slate-500",
                 )}
               >
@@ -236,10 +249,19 @@ export default function NewStudyPage() {
                   {uploadError}
                 </div>
               )}
-              <div className="flex justify-end gap-2">
-                <Button onClick={handleUpload} disabled={files.length === 0 || uploading}>
-                  <Upload className="h-4 w-4" /> {uploading ? "Uploading…" : "Upload & Continue"}
-                </Button>
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs text-slate-500">
+                  No data yet? You can configure the study now and upload ADaM later —
+                  previews render as placeholder shells until data arrives.
+                </p>
+                <div className="flex shrink-0 gap-2">
+                  <Button variant="outline" onClick={handleSkipData} disabled={uploading}>
+                    Skip — no data yet
+                  </Button>
+                  <Button onClick={handleUpload} disabled={files.length === 0 || uploading}>
+                    <Upload className="h-4 w-4" /> {uploading ? "Uploading…" : "Upload & Continue"}
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>

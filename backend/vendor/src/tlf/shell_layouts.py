@@ -142,6 +142,68 @@ def randomization_by_country(columns: list[dict[str, Any]]) -> list[list[str]]:
     ]
 
 
+def analysis_sets(columns: list[dict[str, Any]]) -> list[list[str]]:
+    cells = _all("xx (xx.x)", columns)
+    return [
+        _row("Safety Analysis Set (SAF)", cells),
+        _row("Not Included in the SAF", cells),
+        _row("   < reason 1 >", cells),
+        _row("   < reason 2 >", cells),
+        _blank(columns),
+        _row("Intent-To-Treat Set (ITT)", cells),
+        _row("Not Included in the ITT", cells),
+        _row("   < reason 1 >", cells),
+        _row("   < reason 2 >", cells),
+    ]
+
+
+def protocol_deviations(columns: list[dict[str, Any]]) -> list[list[str]]:
+    cells = _all("xx (xx.x)", columns)
+    rows = [
+        _row("Subjects with at Least One Important Protocol Deviation", cells),
+        _blank(columns),
+    ]
+    for cat in (1, 2):
+        rows.append(_row(f"Deviation Category #{cat}", cells))
+        rows.append(_row(f"   Deviation Subcategory #{cat}.1", cells))
+        rows.append(_row(f"   Deviation Subcategory #{cat}.2", cells))
+        rows.append(_blank(columns))
+    rows.append(_row("...", _all("", columns)))
+    return rows
+
+
+def medical_history(columns: list[dict[str, Any]]) -> list[list[str]]:
+    blank = _blank(columns)
+    cells = _all("xx (xx.x)", columns)
+    rows: list[list[str]] = [
+        _row("Subjects with Any Medical History", cells),
+        blank,
+    ]
+    for soc in (1, 2):
+        rows.append(_row(f"System Organ Class #{soc}", cells))
+        for pt in (1, 2, 3):
+            rows.append(_row(f"   Preferred Term #{soc}.{pt}", cells))
+        rows.append(blank)
+    rows.append(_row("...", _all("", columns)))
+    return rows
+
+
+def medications(columns: list[dict[str, Any]], *, prior: bool) -> list[list[str]]:
+    label = "Prior" if prior else "Concomitant"
+    cells = _all("xx (xx.x)", columns)
+    rows = [
+        _row(f"Subjects with at Least One {label} Medication", cells),
+        _blank(columns),
+    ]
+    for atc2 in (1, 2):
+        rows.append(_row(f"ATC Level 2 Category #{atc2}", cells))
+        rows.append(_row(f"   ATC Level 4 Category #{atc2}.1", cells))
+        rows.append(_row(f"   ATC Level 4 Category #{atc2}.2", cells))
+        rows.append(_blank(columns))
+    rows.append(_row("...", _all("", columns)))
+    return rows
+
+
 def baseline(columns: list[dict[str, Any]]) -> list[list[str]]:
     blank = _blank(columns)
     rows: list[list[str]] = []

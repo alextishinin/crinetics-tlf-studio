@@ -8,6 +8,8 @@ adam_domains:
 - adsl
 analysis_set: SAF
 column_layout: safety_with_total
+base_filter:
+  AENTMTFL: Y
 row_schema:
 - label: Subjects with Any Medical History
   kind: n_pct

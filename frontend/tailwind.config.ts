@@ -1,7 +1,9 @@
 import type { Config } from "tailwindcss";
 
+// Note: no darkMode config — the app is light-only by design. Several
+// components hard-code bg-white/text-slate-*, so a dark class toggle would
+// produce a half-themed UI; remove that assumption before adding dark mode.
 const config: Config = {
-  darkMode: ["class"],
   content: ["./src/**/*.{ts,tsx}"],
   theme: {
     container: {

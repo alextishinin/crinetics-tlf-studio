@@ -1,7 +1,8 @@
 "use client";
 import { useParams } from "next/navigation";
-import { useEffect } from "react";
-import { Copy, Download, Flag, PlayCircle, RefreshCw } from "lucide-react";
+import { useEffect, useMemo } from "react";
+import { Copy, Download, RefreshCw } from "lucide-react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/layout/Header";
@@ -9,15 +10,38 @@ import { TablePreview } from "@/components/preview/TablePreview";
 import { FigurePreview } from "@/components/preview/FigurePreview";
 import { AiPanel } from "@/components/preview/AiPanel";
 import { useAnomalies, usePreview } from "@/hooks/usePreview";
+import { useShells } from "@/hooks/useShells";
 import { preview } from "@/lib/api";
 
 export default function TablePreviewPage() {
   const params = useParams<{ studyId: string; tableId: string }>();
   const previewMutation = usePreview(params.studyId, params.tableId);
   const anomaliesMutation = useAnomalies(params.studyId, params.tableId);
+  const { data: shellList } = useShells(params.studyId);
+
+  // Resolve the human-readable name ("Table 14.3.1.2 — Summary of ...")
+  // instead of showing the raw shell id in the header.
+  const shellInfo = useMemo(() => {
+    for (const g of shellList?.groups ?? []) {
+      for (const s of g.shells) {
+        if (s.id === params.tableId) return s;
+      }
+    }
+    return null;
+  }, [shellList, params.tableId]);
+  const heading = shellInfo
+    ? `${shellInfo.type === "figure" ? "Figure" : "Table"} ${shellInfo.table_number}`
+    : `Preview · ${params.tableId}`;
 
   const data = previewMutation.data;
   const isFigure = data?.kind === "figure";
+
+  // Users arrive from a "Preview" button — run the aggregation immediately
+  // instead of presenting a second button.
+  useEffect(() => {
+    previewMutation.mutate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.studyId, params.tableId]);
 
   // Auto-scan anomalies once a TABLE preview returns. Figures have no rows.
   useEffect(() => {
@@ -31,12 +55,13 @@ export default function TablePreviewPage() {
     if (!data || data.kind === "figure") return;
     const rows = data.body_rows.map((r) => r.join("\t")).join("\n");
     void navigator.clipboard.writeText(rows);
+    toast.success("Table rows copied to clipboard");
   };
 
   return (
     <div className="flex h-full flex-col">
       <Header
-        title={`Preview · ${params.tableId}`}
+        title={heading}
         action={
           <div className="flex gap-2">
             <Button
@@ -44,7 +69,7 @@ export default function TablePreviewPage() {
               onClick={() => previewMutation.mutate()}
               disabled={previewMutation.isPending}
             >
-              <RefreshCw className="h-4 w-4" /> {previewMutation.data ? "Regenerate" : "Generate"}
+              <RefreshCw className="h-4 w-4" /> Regenerate
             </Button>
             <Button variant="outline" disabled={!data || isFigure} onClick={handleCopy}>
               <Copy className="h-4 w-4" /> Copy
@@ -55,27 +80,39 @@ export default function TablePreviewPage() {
                 <Download className="h-4 w-4" /> Download RTF
               </a>
             </Button>
-            <Button variant="outline" disabled={!data}>
-              <Flag className="h-4 w-4" /> Flag Issue
-            </Button>
           </div>
         }
       />
+      {shellInfo && (
+        <div className="border-b bg-white px-6 py-2 text-sm text-slate-600">
+          {shellInfo.title_line2}
+          {shellInfo.title_line3 && (
+            <span className="text-slate-400"> · {shellInfo.title_line3}</span>
+          )}
+        </div>
+      )}
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 p-6 lg:grid-cols-[1fr_360px]">
         <div className="min-h-0 overflow-auto">
-          {!previewMutation.data && !previewMutation.isPending && (
+          {previewMutation.isPending && (
             <div className="rounded-md border-2 border-dashed p-12 text-center">
-              <PlayCircle className="mx-auto mb-3 h-8 w-8 text-slate-400" />
-              <p className="text-sm text-slate-500 mb-3">
-                Generate a preview to run the aggregation against real ADaM data.
+              <RefreshCw className="mx-auto mb-3 h-8 w-8 animate-spin text-slate-400" />
+              <p className="text-sm text-slate-500">
+                Running the aggregation against the study&apos;s ADaM data…
               </p>
-              <Button onClick={() => previewMutation.mutate()}>Generate Preview</Button>
             </div>
           )}
-          {previewMutation.isPending && <p className="text-sm text-slate-500">Running aggregation…</p>}
-          {previewMutation.error && (
+          {previewMutation.error && !previewMutation.isPending && (
             <div className="rounded-md border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
-              {String(previewMutation.error)}
+              <p className="font-medium">Preview failed</p>
+              <p className="mt-1">{String(previewMutation.error)}</p>
+              <Button
+                size="sm"
+                variant="outline"
+                className="mt-3"
+                onClick={() => previewMutation.mutate()}
+              >
+                Try again
+              </Button>
             </div>
           )}
           {data &&

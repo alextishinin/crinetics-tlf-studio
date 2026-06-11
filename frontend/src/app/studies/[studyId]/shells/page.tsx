@@ -2,6 +2,7 @@
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { AlertCircle, Loader2, Sparkles, Save } from "lucide-react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Header } from "@/components/layout/Header";
 import { ShellCard } from "@/components/shells/ShellCard";
 import { useShells, useSaveShellSelection } from "@/hooks/useShells";
+import { useJobs } from "@/hooks/useJobs";
 import { useNlShells } from "@/hooks/useAi";
 import { useShellStore } from "@/store/shellStore";
 
@@ -22,8 +24,25 @@ const SUGGESTIONS = [
 export default function ShellsPage() {
   const params = useParams<{ studyId: string }>();
   const { data, error, isError, isLoading, refetch } = useShells(params.studyId);
+  const { data: jobs } = useJobs(params.studyId, 0);
   const save = useSaveShellSelection(params.studyId);
   const nlMutation = useNlShells(params.studyId);
+
+  // Median duration of completed jobs — a real estimate from this study's
+  // own history rather than an invented per-table constant.
+  const medianJobSeconds = useMemo(() => {
+    const durations = (jobs ?? [])
+      .filter((j) => j.status === "complete" && j.started_at && j.completed_at)
+      .map(
+        (j) =>
+          (new Date(j.completed_at as string).getTime() -
+            new Date(j.started_at as string).getTime()) /
+          1000,
+      )
+      .sort((a, b) => a - b);
+    if (durations.length === 0) return null;
+    return durations[Math.floor(durations.length / 2)];
+  }, [jobs]);
 
   const { selections, setSelections, toggle, pendingChanges, setPendingChanges, applyPending, clearPending } =
     useShellStore();
@@ -66,7 +85,11 @@ export default function ShellsPage() {
         if (s.optional_flag) optionalFlags[s.optional_flag] = !!selections[s.id];
       }
     }
-    save.mutate(optionalFlags);
+    save.mutate(optionalFlags, {
+      onSuccess: () => toast.success("Selection saved"),
+      onError: (err) =>
+        toast.error(`Could not save selection: ${err instanceof Error ? err.message : err}`),
+    });
   };
 
   const handleNl = async () => {
@@ -272,9 +295,13 @@ export default function ShellsPage() {
                   <span>{n}</span>
                 </div>
               ))}
-              <div className="mt-3 text-xs text-slate-500">
-                Estimated generation time: ~{Math.max(5, summary.selected * 5)} seconds
-              </div>
+              {medianJobSeconds !== null && summary.selected > 0 && (
+                <div className="mt-3 text-xs text-slate-500">
+                  Estimated generation time: ~
+                  {Math.max(1, Math.round(medianJobSeconds * summary.selected))} seconds
+                  <span className="text-slate-400"> (based on this study&apos;s past runs)</span>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

@@ -17,10 +17,18 @@ from typing import Any, Iterator
 
 from config import get_settings
 from services import generation_service, study_service
-from services.tlf_runtime import configure_for_study
+from services.tlf_runtime import TLF_LOCK, configure_for_study
 
 
 def generate_preview(study_id: str, table_id: str) -> dict[str, Any]:
+    """Thread-safe wrapper: previews temporarily swap the tlf renderer's
+    render_table binding and flip the library's global shell mode, so the
+    whole operation must be serialised against generation jobs."""
+    with TLF_LOCK:
+        return _generate_preview_locked(study_id, table_id)
+
+
+def _generate_preview_locked(study_id: str, table_id: str) -> dict[str, Any]:
     """Return the table as a JSON-serialisable preview payload:
 
       {

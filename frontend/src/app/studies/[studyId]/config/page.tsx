@@ -2,6 +2,7 @@
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { CheckCircle2 } from "lucide-react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -170,7 +171,11 @@ export default function ConfigPage() {
         },
         document_extracts: documentExtracts as Record<string, unknown>,
       },
-      { onSuccess: () => setSaved(true) },
+      {
+        onSuccess: () => setSaved(true),
+        onError: (err) =>
+          toast.error(`Could not save: ${err instanceof Error ? err.message : err}`),
+      },
     );
 
   if (!data) return <div className="p-6 text-sm text-slate-500">Loading…</div>;

@@ -23,10 +23,15 @@ def create_app() -> FastAPI:
         version=APP_VERSION,
         description="Internal API for Crinetics TLF Studio.",
     )
+    # Restricted to the frontend's origin(s): this API is unauthenticated and
+    # holds study data, so a wildcard here would let any website in the
+    # user's browser read studies / spend their Anthropic credits via
+    # drive-by requests to localhost. (Wildcard + credentials is also an
+    # invalid CORS combination that browsers reject.)
+    origins = [o.strip() for o in settings.cors_origins.split(",") if o.strip()]
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
-        allow_credentials=True,
+        allow_origins=origins,
         allow_methods=["*"],
         allow_headers=["*"],
     )

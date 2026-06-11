@@ -26,8 +26,27 @@ def _data_dir(study_id: str) -> Path:
     return study_service.study_dir(study_id) / "data"
 
 
-def _parquets(study_id: str) -> list[Path]:
-    return sorted(_data_dir(study_id).glob("*.parquet"))
+_DATA_SUFFIXES = (".parquet", ".sas7bdat", ".xpt")
+
+
+def _datasets(study_id: str) -> list[Path]:
+    """Every queryable ADaM file — all upload formats, not just parquet."""
+    d = _data_dir(study_id)
+    if not d.exists():
+        return []
+    return sorted(p for p in d.iterdir() if p.suffix.lower() in _DATA_SUFFIXES)
+
+
+def _scan(path: Path):
+    """LazyFrame over any supported format (parquet stays lazy; SAS formats
+    are read eagerly via the shared reader and wrapped)."""
+    import polars as pl
+
+    if path.suffix.lower() == ".parquet":
+        return pl.scan_parquet(path)
+    from services.adam_service import read_dataset
+
+    return read_dataset(path).lazy()
 
 
 def dataset_schemas(study_id: str) -> list[dict[str, Any]]:
@@ -35,9 +54,9 @@ def dataset_schemas(study_id: str) -> list[dict[str, Any]]:
     import polars as pl
 
     out: list[dict[str, Any]] = []
-    for p in _parquets(study_id):
+    for p in _datasets(study_id):
         try:
-            lf = pl.scan_parquet(p)
+            lf = _scan(p)
             names = lf.collect_schema().names()
             n_rows = lf.select(pl.len()).collect().item()
             out.append({"name": p.stem.lower(), "n_rows": int(n_rows), "columns": names})
@@ -64,15 +83,15 @@ def query_dataset(
 
     # Resolve the dataset file case-insensitively (adsl == ADSL).
     target: Path | None = None
-    for p in _parquets(study_id):
+    for p in _datasets(study_id):
         if p.stem.lower() == str(dataset).lower():
             target = p
             break
     if target is None:
-        available = [p.stem.lower() for p in _parquets(study_id)]
+        available = [p.stem.lower() for p in _datasets(study_id)]
         return {"error": f"Dataset '{dataset}' not found. Available: {available}"}
 
-    lf = pl.scan_parquet(target)
+    lf = _scan(target)
     schema_names = lf.collect_schema().names()
     name_map = {c.lower(): c for c in schema_names}
 

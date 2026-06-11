@@ -1,6 +1,8 @@
 "use client";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { useState } from "react";
+import { toast } from "sonner";
 import {
   CalendarDays,
   CheckCircle2,
@@ -16,6 +18,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Badge, StatusBadge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Header } from "@/components/layout/Header";
@@ -31,15 +34,17 @@ export default function StudyOverviewPage() {
   const { data: jobs } = useJobs(params.studyId);
   const { data: outputs } = useOutputs(params.studyId);
   const deleteStudy = useDeleteStudy();
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   const handleDelete = async () => {
     if (!data) return;
-    const ok = window.confirm(
-      `Delete "${data.meta.title}"?\n\nThis removes all uploaded ADaM data, generated outputs, and audit records from disk. This cannot be undone.`,
-    );
-    if (!ok) return;
-    await deleteStudy.mutateAsync(params.studyId);
-    router.push("/studies");
+    try {
+      await deleteStudy.mutateAsync(params.studyId);
+      toast.success(`Deleted "${data.meta.title}"`);
+      router.push("/studies");
+    } catch (err) {
+      toast.error(`Could not delete study: ${err instanceof Error ? err.message : err}`);
+    }
   };
 
   if (isLoading || !data) return <div className="p-6 text-sm text-slate-500">Loading…</div>;
@@ -135,11 +140,27 @@ export default function StudyOverviewPage() {
           <Button
             variant="outline"
             className="border-rose-200 text-rose-700 hover:bg-rose-50"
-            onClick={handleDelete}
+            onClick={() => setConfirmingDelete(true)}
             disabled={deleteStudy.isPending}
           >
             <Trash2 className="h-4 w-4" /> {deleteStudy.isPending ? "Deleting…" : "Delete Study"}
           </Button>
+          <ConfirmDialog
+            open={confirmingDelete}
+            title={`Delete "${data.meta.title}"?`}
+            description={
+              <>
+                This permanently removes all uploaded ADaM data,{" "}
+                <span className="font-medium">{generated}</span> generated output
+                {generated === 1 ? "" : "s"}, and the audit records for this study from disk.
+                This cannot be undone.
+              </>
+            }
+            confirmLabel="Delete study"
+            busy={deleteStudy.isPending}
+            onConfirm={handleDelete}
+            onCancel={() => setConfirmingDelete(false)}
+          />
         </div>
 
         {/* ---- Detail panels ---- */}

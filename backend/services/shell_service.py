@@ -26,6 +26,20 @@ from models.shell import (
 )
 from services import study_service
 from services.adam_service import read_dataset
+from services.shell_ids import table_number as _shell_table_number
+
+# Every ADaM file format the upload pipeline accepts. Conditionality checks
+# must look across all of them — checking only *.parquet silently deselected
+# conditional shells for studies uploaded as SAS7BDAT/XPT.
+_DATA_SUFFIXES = (".parquet", ".sas7bdat", ".xpt")
+
+
+def _find_dataset(data_dir: Path, stem: str) -> Path | None:
+    for ext in _DATA_SUFFIXES:
+        p = data_dir / f"{stem}{ext}"
+        if p.exists():
+            return p
+    return None
 
 
 # Domain group labels for the left-side sidebar in the TFL selection screen.
@@ -78,13 +92,8 @@ def _group_for(shell: dict[str, Any]) -> str:
 
 
 def _table_number(shell: dict[str, Any]) -> str:
-    """Extract '14.1.1.1' from id 't_14_1_1_1'."""
-    sid = shell["id"]
-    if "_" not in sid:
-        return sid
-    parts = sid.split("_", 1)[1].rsplit("_", 1)
-    # Best-effort: try to recover dotted form
-    return sid.replace("t_", "").replace("f_", "").replace("_common", "_common").replace("_aesi", "_aesi").replace("_", ".")
+    """'t_14_1_1_1' -> '14.1.1.1'; 't_14_3_1_11_common' -> '14.3.1.11 (common)'."""
+    return _shell_table_number(shell["id"])
 
 
 def _domains_available(shell: dict[str, Any], present: set[str]) -> tuple[bool, str | None]:
@@ -114,14 +123,13 @@ def _resolve_condition(
     sid = shell["id"]
     # Heuristics for known conditional outputs:
     if sid == "t_14_3_1_8":   # Fatal AEs
-        return _conditional_on_flag(data_dir, "adsl.parquet", "DTHFL", "Y",
+        return _conditional_on_flag(data_dir, "adsl", "DTHFL", "Y",
                                     explanation="DTHFL='Y' present in ADSL.")
     if sid == "t_14_3_1_7":   # AEs leading to discontinuation
-        return _conditional_on_flag(data_dir, "adsl.parquet", "DSRAEFL", "Y",
+        return _conditional_on_flag(data_dir, "adsl", "DSRAEFL", "Y",
                                     explanation="DSRAEFL='Y' present in ADSL.")
     if sid == "f_14_3_4_3":   # Hy's Law
-        path = data_dir / "adlbhy.parquet"
-        if path.exists():
+        if _find_dataset(data_dir, "adlbhy") is not None:
             return True, "ADLBHY available; potential Hy's Law cases will be plotted."
         return False, "ADLBHY not uploaded."
     return False, None
@@ -129,25 +137,25 @@ def _resolve_condition(
 
 def _conditional_on_flag(
     data_dir: Path,
-    filename: str,
+    stem: str,
     var: str,
     val: str,
     *,
     explanation: str,
 ) -> tuple[bool, str | None]:
-    path = data_dir / filename
-    if not path.exists():
-        return False, f"{filename} not uploaded."
+    path = _find_dataset(data_dir, stem)
+    if path is None:
+        return False, f"{stem} not uploaded."
     try:
         df = read_dataset(path)
     except Exception as exc:
-        return False, f"Could not read {filename}: {exc}"
+        return False, f"Could not read {path.name}: {exc}"
     if var not in df.columns:
-        return False, f"{var} not in {filename}."
+        return False, f"{var} not in {path.name}."
     has_any = df.filter(pl.col(var) == val).height > 0
     if has_any:
         return True, explanation
-    return False, f"No {var}='{val}' rows in {filename}."
+    return False, f"No {var}='{val}' rows in {path.name}."
 
 
 # ---------------------------------------------------------------------------

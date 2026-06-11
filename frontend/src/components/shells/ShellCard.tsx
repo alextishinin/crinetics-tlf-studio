@@ -22,9 +22,19 @@ export function ShellCard({ shell, studyId, checked, onToggle }: Props) {
       className={cn(
         "flex items-start gap-3 rounded-md border p-3",
         !shell.available && "opacity-50",
+        !disabled && "cursor-pointer hover:border-crinetics-teal/50",
       )}
+      onClick={() => !disabled && onToggle()}
+      role={disabled ? undefined : "button"}
+      aria-label={disabled ? undefined : `Toggle ${shell.table_number}`}
     >
-      <Checkbox checked={checked} onCheckedChange={onToggle} disabled={disabled} />
+      <Checkbox
+        checked={checked}
+        onCheckedChange={onToggle}
+        disabled={disabled}
+        aria-label={`Select ${shell.table_number}`}
+        onClick={(e) => e.stopPropagation()}
+      />
       <div className="flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm font-mono text-slate-500">{shell.table_number}</span>
@@ -43,7 +53,10 @@ export function ShellCard({ shell, studyId, checked, onToggle }: Props) {
         )}
       </div>
       <Button asChild size="sm" variant="ghost">
-        <Link href={`/studies/${studyId}/preview/${shell.id}`}>
+        <Link
+          href={`/studies/${studyId}/preview/${shell.id}`}
+          onClick={(e) => e.stopPropagation()}
+        >
           <Eye className="h-3.5 w-3.5" /> Preview
         </Link>
       </Button>

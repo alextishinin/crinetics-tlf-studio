@@ -2,11 +2,21 @@
 
 from __future__ import annotations
 
+import threading
 from pathlib import Path
 from typing import Any
 
 
 _ADAM_SUFFIXES = {".parquet", ".sas7bdat", ".xpt"}
+
+# Serialises every call into the tlf library within this process. The library
+# keeps process-global state (validator shell mode set per study by
+# configure_for_study) and the preview service temporarily swaps the
+# render_table binding across modules — so two studies' generation/preview
+# requests must never interleave inside the library, or one study's tables
+# can render with the other's shell-mode placeholders (or get captured by a
+# concurrent preview instead of writing the RTF).
+TLF_LOCK = threading.RLock()
 
 
 def configure_for_study(cfg: Any, study_dir: Path) -> None:

@@ -133,7 +133,11 @@ def format_stat(value: float | int | None, *, stat: str, raw_dp: int) -> str:
 
 
 def format_percent(n: int | None, denom: int | None) -> str:
-    """Percentage to 1 decimal place; suppressed if n is 0 or null."""
+    """Percentage to 1 decimal place; suppressed if n is 0 or null.
+
+    Exactly 100% deliberately renders as "100" (not "100.0") per the shell
+    template convention — full-population rows show a bare 100.
+    """
     if _SHELL_MODE:
         return "xx.x"
     if n is None or denom in (None, 0):
