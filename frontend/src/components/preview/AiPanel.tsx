@@ -4,6 +4,7 @@ import { KeyRound, Send } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -132,9 +133,9 @@ export function AiPanel({ studyId, tableId, anomalies, onScanAnomalies, isScanni
                 }
               >
                 {m.role === "assistant" ? (
-                  <div className="prose-sm max-w-none [&_code]:rounded [&_code]:bg-slate-100 [&_code]:px-1 [&_ol]:list-decimal [&_ol]:pl-4 [&_p]:my-1 [&_ul]:list-disc [&_ul]:pl-4">
+                  <div className="prose-sm max-w-none overflow-x-auto [&_code]:rounded [&_code]:bg-slate-100 [&_code]:px-1 [&_ol]:list-decimal [&_ol]:pl-4 [&_p]:my-1 [&_ul]:list-disc [&_ul]:pl-4 [&_table]:my-2 [&_table]:w-full [&_table]:border-collapse [&_table]:text-xs [&_th]:border [&_th]:border-slate-200 [&_th]:bg-slate-50 [&_th]:px-1.5 [&_th]:py-1 [&_th]:text-left [&_th]:font-medium [&_td]:border [&_td]:border-slate-200 [&_td]:px-1.5 [&_td]:py-1">
                     {m.content ? (
-                      <ReactMarkdown>{m.content}</ReactMarkdown>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
                     ) : streaming && i === messages.length - 1 ? (
                       <span className="text-slate-400">Thinking…</span>
                     ) : null}

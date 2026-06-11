@@ -7,7 +7,8 @@
       { "area": "Studio", "text": "Outputs now follow the standard clinical review workflow: a second programmer completes a QC checklist (titles, populations, values, precision, footnotes, layout — with the anomaly scan attached), then the biostatistician signs off. Sign-off is only possible after a passed QC, and the old one-click approve is gone." },
       { "area": "Studio", "text": "Every QC and sign-off is recorded with reviewer name and timestamp. Redoing or resetting a review archives the previous records instead of deleting them, and regenerating an output automatically voids its review." },
       { "area": "Studio", "text": "New Audit Trail page per study: a tamper-evident, append-only record of every action — config edits (old → new values), data uploads (with SHA-256 checksums), TFL selection changes, generation runs, reviews, and downloads — with chain-integrity verification and CSV export." },
-      { "area": "Studio", "text": "Delivery packages now include the study's audit trail CSV alongside the manifest." }
+      { "area": "Studio", "text": "Delivery packages now include the study's audit trail CSV alongside the manifest." },
+      { "area": "Studio", "text": "AI assistant answers are easier to read: subject-level results render as real tables, and the assistant's narration no longer runs into its answer." }
     ]
   },
   {

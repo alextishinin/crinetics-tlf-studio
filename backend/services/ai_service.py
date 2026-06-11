@@ -458,8 +458,9 @@ def chat_stream(
     client = _client()
 
     try:
+        streamed_any = False
         for _ in range(6):  # cap tool rounds to avoid loops
-            streamed_any = False
+            first_text_this_round = True
             # Stream each turn so text tokens reach the client as they are
             # produced. get_final_message() still gives us the assembled
             # response (incl. tool_use blocks) to drive the tool loop.
@@ -471,9 +472,16 @@ def chat_stream(
                 messages=convo,
             ) as stream:
                 for text in stream.text_stream:
-                    if text:
-                        streamed_any = True
-                        yield text
+                    if not text:
+                        continue
+                    # Paragraph break between consecutive turns, so the
+                    # pre-tool narration ("Let me query…") doesn't run
+                    # straight into the post-tool answer ("…died.Here…").
+                    if first_text_this_round and streamed_any:
+                        yield "\n\n"
+                    first_text_this_round = False
+                    streamed_any = True
+                    yield text
                 resp = stream.get_final_message()
 
             if resp.stop_reason == "tool_use":
