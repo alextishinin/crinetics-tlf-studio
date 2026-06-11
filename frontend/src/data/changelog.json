@@ -1,5 +1,21 @@
 [
   {
+    "version": "0.9.1",
+    "date": "2026-06-11",
+    "title": "Reliability, more tables & a clearer interface",
+    "changes": [
+      { "area": "Studio", "text": "Seven more tables can now be generated — analysis sets (14.1.1.3), protocol deviations (14.1.1.4), medical history (14.1.2.2), prior and concomitant medications (14.1.2.3 / 14.1.2.4), and the Grade ≥3 AE tables (14.3.1.3 / 14.3.1.4). They previously appeared in the list but failed when generated." },
+      { "area": "Studio", "text": "Failed generations now show the reason inline, with an expandable details view, instead of just a red badge." },
+      { "area": "Studio", "text": "Generating a batch no longer freezes the screen — jobs run in the background and progress updates live, scoped to the current run." },
+      { "area": "Studio", "text": "Table previews open and run automatically, show the real table name and number, and render in the same fixed-width font as the final RTF." },
+      { "area": "Studio", "text": "You can start a study before you have any data — choose “Skip — no data yet” to configure it and preview placeholder shells." },
+      { "area": "Studio", "text": "The AI assistant formats its answers, keeps your conversation when you navigate away, and tells you to add an API key instead of failing silently; AI errors now explain what went wrong." },
+      { "area": "Studio", "text": "Outputs: package only approved files when you want, remove an approval, and clearer confirmations throughout. Each study now shows its name with a link back to all studies." },
+      { "area": "Automation", "text": "Treatment-arm handling, the adverse-event figure, and study-completion rows no longer assume the reference study’s specifics, so other studies render correctly." },
+      { "area": "Desktop", "text": "The app detects when another program is using its port and explains it, and shuts its background services down cleanly on exit." }
+    ]
+  },
+  {
     "version": "0.9.0",
     "date": "2026-06-09",
     "title": "Updates page + real version numbers",

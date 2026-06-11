@@ -26,7 +26,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 _ENV_FILE = Path(__file__).parent / ".env"
 
 APP_DIR_NAME = "TLF Studio"
-APP_VERSION = "0.9.0"
+APP_VERSION = "0.9.1"
 
 
 def is_frozen() -> bool:

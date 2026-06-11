@@ -1,6 +1,6 @@
 {
   "name": "tlf-studio-desktop",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "private": true,
   "description": "TLF Studio desktop shell (Electron) — bundles the frozen backend and the Next.js UI.",
   "author": "Crinetics Pharmaceuticals",
@@ -32,11 +32,19 @@
       "buildResources": "build"
     },
     "extraResources": [
-      { "from": "../backend/dist/backend", "to": "backend" },
-      { "from": "../frontend/.next/standalone", "to": "frontend" }
+      {
+        "from": "../backend/dist/backend",
+        "to": "backend"
+      },
+      {
+        "from": "../frontend/.next/standalone",
+        "to": "frontend"
+      }
     ],
     "win": {
-      "target": ["nsis"],
+      "target": [
+        "nsis"
+      ],
       "artifactName": "TLF-Studio-Setup-${version}.${ext}"
     },
     "nsis": {
